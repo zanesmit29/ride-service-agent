@@ -1,0 +1,51 @@
+# ruff: noqa
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+from dotenv import load_dotenv
+from google.adk.agents import Agent
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+from mcp import StdioServerParameters
+from .tools import insert_reminder
+from .prompts import INSTRUCTIONS
+
+load_dotenv()
+
+CONNECTION_STRING = os.getenv("MDB_MCP_CONNECTION_STRING")
+
+root_agent = Agent(
+    model="gemini-2.5-pro",
+    name="ride_service_agent",
+    instruction=INSTRUCTIONS,
+    tools=[
+        McpToolset(
+            connection_params=StdioConnectionParams(
+                server_params=StdioServerParameters(
+                    command="npx",
+                    args=["-y", "mongodb-mcp-server"],
+                    env={
+                        "MDB_MCP_CONNECTION_STRING": CONNECTION_STRING,
+                        "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
+                        "MDB_MCP_TELEMETRY": "disabled",
+                    },
+                ),
+                timeout=30,
+            ),
+            tool_filter=["find", "aggregate", "collection-schema", "count", "list-collections"],
+        ),
+        insert_reminder,
+    ],
+)
