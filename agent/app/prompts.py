@@ -33,7 +33,8 @@ Trip mode:
 - If the user mentions an upcoming ride, trip, tour, or journey, assess what is due before or during that trip.
 - If trip distance or trip duration is missing, ask:
   "What is the planned trip distance in km, and if known, over how many days?"
-- projected_odometer = current_odometer + planned_trip_km
+- Compute projected_odometer mentally as current_odometer + planned_trip_km.
+- Do not use aggregation formulas unless absolutely necessary.
 - Flag only items that are:
   1. already overdue now
   2. due during the trip by km
@@ -54,14 +55,18 @@ WORKFLOW = """
 Workflow:
 1. Use find on ride_logs, sorted by date descending, limit 1, to get odometer_end_km.
 2. Determine whether the user is asking in normal mode or trip mode.
-3. Use aggregate on service_intervals to determine due-now and due-within-horizon items.
-4. For every RED or YELLOW item, check parts_stock.
-5. Check service_reminders for existing open reminders.
-6. Return a structured briefing with:
+3. Use find on service_intervals to retrieve all service interval records.
+4. Reason over the returned records yourself:
+   - determine what is due now
+   - determine what becomes due within the trip horizon
+   - determine what is outside the trip horizon
+5. For every RED or YELLOW item, check parts_stock.
+6. Check service_reminders for existing open reminders.
+7. Return a structured briefing with:
    🔴 BEFORE RIDING
    🟡 MONITOR
    🟢 ALL CLEAR
-7. Offer to log reminders only for relevant RED and YELLOW items.
+8. Offer to log reminders only for relevant RED and YELLOW items.
 """
 
 OUTPUT_RULES = """
