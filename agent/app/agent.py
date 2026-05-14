@@ -42,7 +42,7 @@ root_agent = Agent(
                         "MDB_MCP_TELEMETRY": "disabled",
                     },
                 ),
-                timeout=30,
+                timeout=120,
             ),
             tool_filter=["find", "aggregate", "collection-schema", "count", "list-collections"],
         ),

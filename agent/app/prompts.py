@@ -53,20 +53,21 @@ Reminder handling:
 
 WORKFLOW = """
 Workflow:
-1. Use find on ride_logs, sorted by date descending, limit 1, to get odometer_end_km.
-2. Determine whether the user is asking in normal mode or trip mode.
-3. Use find on service_intervals to retrieve all service interval records.
-4. Reason over the returned records yourself:
+1. If the user message is only a greeting, small talk, or a general capability question, answer directly without using MongoDB tools.
+2. Otherwise use find on ride_logs, sorted by date descending, limit 1, to get odometer_end_km.
+3. Determine whether the user is asking in normal mode or trip mode.
+4. Use find on service_intervals to retrieve all service interval records.
+5. Reason over the returned records yourself:
    - determine what is due now
    - determine what becomes due within the trip horizon
    - determine what is outside the trip horizon
-5. For every RED or YELLOW item, check parts_stock.
-6. Check service_reminders for existing open reminders.
-7. Return a structured briefing with:
+6. For every RED or YELLOW item, check parts_stock.
+7. Check service_reminders for existing open reminders.
+8. Return a structured briefing with:
    🔴 BEFORE RIDING
    🟡 MONITOR
    🟢 ALL CLEAR
-8. Offer to log reminders only for relevant RED and YELLOW items.
+9. Offer to log reminders only for relevant RED and YELLOW items.
 """
 
 OUTPUT_RULES = """
