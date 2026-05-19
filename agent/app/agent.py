@@ -16,20 +16,22 @@
 import os
 from dotenv import load_dotenv
 from google.adk.agents import Agent
+from google.adk.tools import google_search
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
 from .tools import insert_reminder
-from .prompts import INSTRUCTIONS
+from .prompts import ROOT_AGENT_INSTRUCTIONS, SERVICE_AGENT_INSTRUCTIONS, DIAGNOSTICS_AGENT_INSTRUCTIONS
 
 load_dotenv()
 
 CONNECTION_STRING = os.getenv("MDB_MCP_CONNECTION_STRING")
 
-root_agent = Agent(
+service_agent = Agent(
     model="gemini-2.5-pro",
-    name="ride_service_agent",
-    instruction=INSTRUCTIONS,
+    name="service_agent",
+    description="Handles motorcycle maintenance analysis, trip-readiness checks, reminder checks, and parts availability using MongoDB data.",
+    instruction=SERVICE_AGENT_INSTRUCTIONS,
     tools=[
         McpToolset(
             connection_params=StdioConnectionParams(
@@ -48,4 +50,40 @@ root_agent = Agent(
         ),
         insert_reminder,
     ],
+    output_key="service_advice",
 )
+
+diagnostics_agent = Agent(
+    model="gemini-2.5-pro",
+    name="diagnostics_agent",
+    description="Diagnoses motorcycle issues based on user-described symptoms and a database of known issues and fixes.",
+    instruction=DIAGNOSTICS_AGENT_INSTRUCTIONS,
+    tools=[
+        McpToolset(
+            connection_params=StdioConnectionParams(
+                server_params=StdioServerParameters(
+                    command="npx",
+                    args=["-y", "mongodb-mcp-server"],
+                    env={
+                        "MDB_MCP_CONNECTION_STRING": CONNECTION_STRING,
+                        "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
+                        "MDB_MCP_TELEMETRY": "disabled",
+                    },
+                ),
+                timeout=120,
+            ),
+            tool_filter=["find", "collection-schema"],
+        ),
+    ],
+    output_key="diagnosis",
+)
+
+root_agent = Agent(
+    model="gemini-2.5-pro",
+    name="ride_service_agent",
+    description="Coordinates the motorcycle assistant, routing maintenance and trip-readiness questions to service_agent and symptom-based diagnosis questions to diagnostics_agent.",
+    instruction=ROOT_AGENT_INSTRUCTIONS,
+    tools=[],
+    sub_agents=[service_agent, diagnostics_agent],
+)
+
