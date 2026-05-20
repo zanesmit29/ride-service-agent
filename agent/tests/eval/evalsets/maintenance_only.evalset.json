@@ -1,0 +1,22 @@
+{
+  "eval_set_id": "maintenance_only",
+  "name": "Maintenance only",
+  "description": "Single  maintenance case",
+  "eval_cases": [
+    {
+      "eval_id": "maintenance_specific_task",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "What service does my motorcycle need right now?"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

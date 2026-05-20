@@ -1,0 +1,126 @@
+{
+  "eval_set_id": "basic",
+  "name": "Motorcycle Agent Basic Evaluation",
+  "description": "Core evaluation set for the motorcycle multi-agent system.",
+  "eval_cases": [
+    {
+      "eval_id": "greeting_capabilities",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              { "text": "Hello, what can you help me with?" }
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "trip_missing_distance",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              { "text": "Do I need to service my bike before my upcoming trip?" }
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "diagnostics_clarify_problem",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              { "text": "I am having a problem with my motorcycle." }
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "diagnostics_specific_symptom",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              { "text": "My bike is vibrating a lot and feels unstable when braking." }
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "mixed_problem_and_service",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              { "text": "My bike has starting issues and I also want to know if it is ready for a 500 km trip." }
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "out_of_scope_query",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              { "text": "Can you help me file my taxes?" }
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "maintenance_general",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              { "text": "What service does my motorcycle need right now?" }
+            ]
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "app",
+        "user_id": "eval_user",
+        "state": {}
+      }
+    }
+  ]
+}

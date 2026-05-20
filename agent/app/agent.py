@@ -16,7 +16,6 @@
 import os
 from dotenv import load_dotenv
 from google.adk.agents import Agent
-from google.adk.tools import google_search
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
@@ -26,6 +25,27 @@ from .prompts import ROOT_AGENT_INSTRUCTIONS, SERVICE_AGENT_INSTRUCTIONS, DIAGNO
 load_dotenv()
 
 CONNECTION_STRING = os.getenv("MDB_MCP_CONNECTION_STRING")
+if not CONNECTION_STRING:
+    raise ValueError("MDB_MCP_CONNECTION_STRING is not set in the environment.")
+
+MONGO_MCP_ENV = {
+    "MDB_MCP_CONNECTION_STRING": CONNECTION_STRING,
+    "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
+    "MDB_MCP_TELEMETRY": "disabled",
+}
+
+def build_mongo_toolset(tool_filter: list[str]) -> McpToolset:
+    return McpToolset(
+        connection_params=StdioConnectionParams(
+            server_params=StdioServerParameters(
+                command="npx",
+                args=["-y", "mongodb-mcp-server"],
+                env=MONGO_MCP_ENV,
+            ),
+            timeout=120,
+        ),
+        tool_filter=tool_filter,
+    )
 
 service_agent = Agent(
     model="gemini-2.5-pro",
@@ -33,21 +53,7 @@ service_agent = Agent(
     description="Handles motorcycle maintenance analysis, trip-readiness checks, reminder checks, and parts availability using MongoDB data.",
     instruction=SERVICE_AGENT_INSTRUCTIONS,
     tools=[
-        McpToolset(
-            connection_params=StdioConnectionParams(
-                server_params=StdioServerParameters(
-                    command="npx",
-                    args=["-y", "mongodb-mcp-server"],
-                    env={
-                        "MDB_MCP_CONNECTION_STRING": CONNECTION_STRING,
-                        "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
-                        "MDB_MCP_TELEMETRY": "disabled",
-                    },
-                ),
-                timeout=120,
-            ),
-            tool_filter=["find", "aggregate", "collection-schema", "count", "list-collections"],
-        ),
+        build_mongo_toolset(["find", "aggregate", "collection-schema", "count", "list-collections"]),
         insert_reminder,
     ],
     output_key="service_advice",
@@ -59,21 +65,7 @@ diagnostics_agent = Agent(
     description="Diagnoses motorcycle issues based on user-described symptoms and a database of known issues and fixes.",
     instruction=DIAGNOSTICS_AGENT_INSTRUCTIONS,
     tools=[
-        McpToolset(
-            connection_params=StdioConnectionParams(
-                server_params=StdioServerParameters(
-                    command="npx",
-                    args=["-y", "mongodb-mcp-server"],
-                    env={
-                        "MDB_MCP_CONNECTION_STRING": CONNECTION_STRING,
-                        "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
-                        "MDB_MCP_TELEMETRY": "disabled",
-                    },
-                ),
-                timeout=120,
-            ),
-            tool_filter=["find", "collection-schema"],
-        ),
+        build_mongo_toolset(["find", "collection-schema"]),
     ],
     output_key="diagnosis",
 )

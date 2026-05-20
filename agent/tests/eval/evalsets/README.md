@@ -9,7 +9,7 @@ This directory contains evaluation sets for testing agent behavior using `adk ev
 make eval
 
 # Run specific evalset
-make eval EVALSET=tests/eval/evalsets/custom.evalset.json
+make eval EVALSET=tests/eval/evalsets/basic.evalset.json
 
 # Run all evalsets
 make eval-all
@@ -76,5 +76,25 @@ ADK eval measures:
 - Include both happy path and edge cases
 - Test each core capability from DESIGN_SPEC.md
 - Add cases when you find bugs in production
+
+## Debugging the ADK Eval Setup
+
+We debugged the evaluation workflow in a stepwise way:
+
+1. Confirmed the active virtual environment with `$env:VIRTUAL_ENV`.
+2. Verified the actual Python interpreter using `python -c "import sys; print(sys.executable)"`.
+3. Targeted the active parent venv explicitly using `uv ... --active`.
+4. Fixed a Windows file lock issue where `adk.exe` was being used by another process.
+5. Re-synced dependencies with `uv sync --active --dev --extra eval`.
+6. Ran the full eval command with `uv run --active adk eval ...`.
+7. Reduced the problem by creating a minimal one-case evalset.
+8. Fixed the evalset schema so it matched ADK’s expected object structure.
+9. Confirmed the smoke test passed with `1/1` tests passing.
+10. Split failing cases into separate one-case evalsets and verified them individually.
+11. Kept the small evalsets as stable regression tests for future debugging.
+12. Used uv run --active adk eval ./app "tests/eval/evalsets/one_case.evalset.json" --config_file_path="tests/eval/eval_config.json" for example to run specific evalsets.
+
+**Lesson learned:** When ADK eval becomes flaky on a larger suite, isolate the failure into single-case evalsets first. This makes it much easier to separate environment problems, schema problems, and tool-routing problems.
+
 
 See [ADK documentation](https://google.github.io/adk-docs/) for advanced evaluation options.

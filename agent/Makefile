@@ -70,6 +70,9 @@ test:
 # Agent Evaluation
 # ==============================================================================
 
+EVALSET ?= tests/eval/evalsets/basic.evalset.json
+EVAL_CONFIG ?= tests/eval/eval_config.json
+
 # Run agent evaluation using ADK eval
 # Usage: make eval [EVALSET=tests/eval/evalsets/basic.evalset.json] [EVAL_CONFIG=tests/eval/eval_config.json]
 eval:
@@ -77,8 +80,7 @@ eval:
 	@echo "| Running Agent Evaluation                                                    |"
 	@echo "==============================================================================="
 	uv sync --dev --extra eval
-	uv run adk eval ./app $${EVALSET:-tests/eval/evalsets/basic.evalset.json} \
-		$(if $(EVAL_CONFIG),--config_file_path=$(EVAL_CONFIG),$(if $(wildcard tests/eval/eval_config.json),--config_file_path=tests/eval/eval_config.json,))
+	uv run adk eval ./app "$(EVALSET)" --config_file_path="$(EVAL_CONFIG)"
 
 # Run evaluation with all evalsets
 eval-all:
@@ -88,7 +90,7 @@ eval-all:
 	@for evalset in tests/eval/evalsets/*.evalset.json; do \
 		echo ""; \
 		echo "▶ Running: $$evalset"; \
-		$(MAKE) eval EVALSET=$$evalset || exit 1; \
+		$(MAKE) eval EVALSET=$$evalset EVAL_CONFIG=$(EVAL_CONFIG) || exit 1; \
 	done
 	@echo ""
 	@echo "✅ All evalsets completed"

@@ -1,0 +1,21 @@
+{
+  "eval_set_id": "one_case",
+  "name": "One case smoke test",
+  "description": "Minimal evalset to confirm ADK eval runs.",
+  "eval_cases": [
+    {
+      "eval_id": "simple_greeting",
+      "conversation": [
+        {
+          "user_content": {
+            "parts": [
+              {
+                "text": "Hi, I need help with my motorcycle."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

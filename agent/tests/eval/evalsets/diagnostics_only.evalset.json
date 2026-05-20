@@ -1,0 +1,22 @@
+{
+  "eval_set_id": "diagnostics_only",
+  "name": "Diagnostics only",
+  "description": "Single failing diagnostics case",
+  "eval_cases": [
+    {
+      "eval_id": "diagnostics_specific_symptom",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "My windscreen is making a rattling noise when I ride. Can you help me fix it?"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

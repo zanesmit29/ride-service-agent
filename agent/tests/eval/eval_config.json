@@ -3,17 +3,33 @@
     "rubric_based_final_response_quality_v1": {
       "threshold": 0.8,
       "judgeModelOptions": {
-        "judgeModel": "gemini-3-flash-preview",
+        "judgeModel": "gemini-2.5-pro",
         "numSamples": 1
       },
       "rubrics": [
         {
           "rubricId": "relevance",
-          "rubricContent": { "textProperty": "The response directly addresses the user's query." }
+          "rubricContent": {
+            "textProperty": "The response directly addresses the user's query."
+          }
         },
         {
           "rubricId": "helpfulness",
-          "rubricContent": { "textProperty": "The response is helpful and provides useful information." }
+          "rubricContent": {
+            "textProperty": "The response is practical, useful, and action-oriented for a motorcycle user."
+          }
+        },
+        {
+          "rubricId": "clarification",
+          "rubricContent": {
+            "textProperty": "If the user's request is ambiguous or missing required details, the response asks a brief and appropriate clarifying question instead of guessing."
+          }
+        },
+        {
+          "rubricId": "scope_control",
+          "rubricContent": {
+            "textProperty": "The response stays within the motorcycle assistant's scope and does not invent unsupported capabilities."
+          }
         }
       ]
     }
