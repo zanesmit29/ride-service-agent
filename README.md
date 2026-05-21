@@ -21,6 +21,12 @@ Key files (focus)
 	- `insert_reminder(service_type: str, due_km: int, due_date: str) -> dict`:
 		- Connects to MongoDB using `MDB_MCP_CONNECTION_STRING` and inserts a document into `ride_agent_db.service_reminders`.
 		- Intended to be called only after user confirmation; returns a confirmation dict with `inserted_id`.
+	- `get_rider_profile(user_id: str) -> dict`:
+		- Reads a rider profile from `ride_agent_db.rider_profiles` and returns the profile (or `{"status": "not_found"}`).
+		- Used by the agents to personalise advice and route preference updates.
+	- `update_rider_preferences(user_id: str, ...) -> dict`:
+		- Updates a defined set of rider preference fields (route, weather, trip style, comfort, maintenance reminders) without allowing arbitrary schema keys.
+		- Only provided kwargs are written; returns a summary of updated fields and upsert information.
 
 - `agent/app/prompts.py` — agent instruction prompts and domain rules
 	- Contains long-form instruction templates used to configure agent behavior and routing rules.
@@ -72,6 +78,33 @@ Testing agent tools locally
 from app.agent import root_agent
 # Use root_agent.run(...) or the ADK APIs to send a message to the agent (see ADK docs)
 ```
+
+**Agent tools & direct usage**
+
+- **Environment:** `MDB_MCP_CONNECTION_STRING` must be set (or use the MCP helper launched by the code). The agent code also configures a helper MCP server process with `MONGO_MCP_ENV` when launching `mongodb-mcp-server` (see `agent/app/agent.py`).
+- **Toolset behavior:** The code builds an `McpToolset` that launches `npx -y mongodb-mcp-server` and restricts allowed DB operations (e.g., `find`, `aggregate`, `collection-schema`).
+- **Direct Python examples:**
+
+```python
+# Read a rider profile
+from app.tools import get_rider_profile
+print(get_rider_profile("eval_user"))
+
+# Update a few rider preferences (only provided fields are updated)
+from app.tools import update_rider_preferences
+resp = update_rider_preferences(
+		user_id="eval_user",
+		avoid_city=True,
+		prefer_scenic_over_fastest=True,
+		reminder_lead_days=7,
+)
+print(resp)
+```
+
+- **Agent composition:** `agent/app/agent.py` exposes three Agent instances:
+	- `service_agent` — attached tools: Mongo MCP toolset + `insert_reminder` (can log reminders into `service_reminders`).
+	- `diagnostics_agent` — attached tools: Mongo MCP toolset (for issue lookups and schema discovery).
+	- `root_agent` — attached tools: `get_rider_profile`, `update_rider_preferences`; routes requests to the two specialist agents.
 
 Notes
 - `insert_reminder` in `tools.py` performs a direct `pymongo` insert into `ride_agent_db.service_reminders` and closes the client — ensure your connection string and DB permissions are correct.

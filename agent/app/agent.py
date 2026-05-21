@@ -19,7 +19,7 @@ from google.adk.agents import Agent
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
-from .tools import insert_reminder
+from .tools import insert_reminder, get_rider_profile, update_rider_preferences
 from .prompts import ROOT_AGENT_INSTRUCTIONS, SERVICE_AGENT_INSTRUCTIONS, DIAGNOSTICS_AGENT_INSTRUCTIONS
 
 load_dotenv()
@@ -75,7 +75,7 @@ root_agent = Agent(
     name="ride_service_agent",
     description="Coordinates the motorcycle assistant, routing maintenance and trip-readiness questions to service_agent and symptom-based diagnosis questions to diagnostics_agent.",
     instruction=ROOT_AGENT_INSTRUCTIONS,
-    tools=[],
+    tools=[get_rider_profile, update_rider_preferences],
     sub_agents=[service_agent, diagnostics_agent],
 )
 

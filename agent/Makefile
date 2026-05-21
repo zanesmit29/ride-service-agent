@@ -5,9 +5,8 @@
 
 # Install dependencies using uv package manager
 install:
-	@command -v uv >/dev/null 2>&1 || { echo "uv is not installed. Installing uv..."; curl -LsSf https://astral.sh/uv/0.8.13/install.sh | sh; source $HOME/.local/bin/env; }
-	uv sync
-
+	@command -v uv >/dev/null 2>&1 || { echo "uv is not installed. Installing uv..."; curl -LsSf https://astral.sh/uv/install.sh | sh; source $$HOME/.local/bin/env; }
+	uv sync --active
 # ==============================================================================
 # Playground Targets
 # ==============================================================================
@@ -63,9 +62,8 @@ backend: deploy
 
 # Run unit and integration tests
 test:
-	uv sync --dev
-	uv run pytest tests/unit && uv run pytest tests/integration
-
+	uv sync --active --dev
+	uv run --active pytest tests/unit && uv run --active pytest tests/integration
 # ==============================================================================
 # Agent Evaluation
 # ==============================================================================
@@ -79,8 +77,8 @@ eval:
 	@echo "==============================================================================="
 	@echo "| Running Agent Evaluation                                                    |"
 	@echo "==============================================================================="
-	uv sync --dev --extra eval
-	uv run adk eval ./app "$(EVALSET)" --config_file_path="$(EVAL_CONFIG)"
+	uv sync --active --dev --extra eval
+	uv run --active adk eval ./app "$(EVALSET)" --config_file_path="$(EVAL_CONFIG)"
 
 # Run evaluation with all evalsets
 eval-all:

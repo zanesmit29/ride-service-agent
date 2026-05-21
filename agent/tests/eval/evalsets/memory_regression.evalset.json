@@ -1,0 +1,45 @@
+{
+  "eval_set_id": "memory_regression",
+  "eval_cases": [
+    {
+      "eval_id": "memory_read_preference_awareness",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Given my ride preferences, what should I keep in mind for a ride this weekend?"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "memory_write_confirm_and_save",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Please remember that I want to avoid highways and I prefer scenic routes over the fastest option."
+              }
+            ]
+          }
+        },
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Yes, remember that for future trip planning."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
