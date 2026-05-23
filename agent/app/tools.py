@@ -1,6 +1,7 @@
 import os
 from pymongo import MongoClient
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, timedelta
+import requests
 
 CONNECTION_STRING = os.getenv("MDB_MCP_CONNECTION_STRING")
 
@@ -170,3 +171,150 @@ def update_rider_preferences(
         "modified_count": result.modified_count,
         "upserted_id": str(result.upserted_id) if result.upserted_id else None,
     }
+
+
+def get_weather_forecast(
+    latitude: float,
+    longitude: float,
+    start_date: str,
+    end_date: str,
+    location_label: str,
+) -> dict:
+    """
+    Retrieve forecast data for a candidate trip destination using Open-Meteo.
+
+    Use this tool when evaluating destination candidates for a motorcycle trip.
+    Provide latitude and longitude from the trip_candidates.weather_query field.
+    Dates must be in YYYY-MM-DD format and must be within the forecast horizon.
+
+    Args:
+        latitude: Latitude of the destination candidate.
+        longitude: Longitude of the destination candidate.
+        start_date: Trip start date in YYYY-MM-DD format.
+        end_date: Trip end date in YYYY-MM-DD format.
+        location_label: Human-readable label for the destination, such as 'Lille,FR'.
+
+    Returns:
+        A dict with forecast summary information for the requested period.
+    """
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+    except ValueError:
+        return {
+            "status": "error",
+            "location_label": location_label,
+            "message": "Dates must be in YYYY-MM-DD format.",
+        }
+
+    if end < start:
+        return {
+            "status": "error",
+            "location_label": location_label,
+            "message": "end_date must be on or after start_date.",
+        }
+
+    today = datetime.now(timezone.utc).date()
+
+    if start < today:
+        return {
+            "status": "error",
+            "location_label": location_label,
+            "message": "Forecast API only supports today or future dates.",
+        }
+
+    max_forecast_date = today + timedelta(days=15)
+    if end > max_forecast_date:
+        return {
+            "status": "error",
+            "location_label": location_label,
+            "message": f"Forecast API supports up to 16 days ahead. Latest allowed end_date is {max_forecast_date.isoformat()}.",
+        }
+
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": [
+            "temperature_2m_max",
+            "temperature_2m_min",
+            "precipitation_sum",
+            "precipitation_hours",
+            "wind_speed_10m_max",
+            "weather_code",
+        ],
+        "timezone": "auto",
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=20)
+        response.raise_for_status()
+        data = response.json()
+
+        daily = data.get("daily", {})
+        times = daily.get("time", [])
+        temp_max = daily.get("temperature_2m_max", [])
+        temp_min = daily.get("temperature_2m_min", [])
+        rain_sum = daily.get("precipitation_sum", [])
+        rain_hours = daily.get("precipitation_hours", [])
+        wind_max = daily.get("wind_speed_10m_max", [])
+        weather_codes = daily.get("weather_code", [])
+
+        if not times:
+            return {
+                "status": "error",
+                "location_label": location_label,
+                "message": "No forecast data returned for the requested dates.",
+            }
+
+        day_count = len(times)
+        avg_temp_max = sum(temp_max) / len(temp_max) if temp_max else None
+        avg_temp_min = sum(temp_min) / len(temp_min) if temp_min else None
+        total_precipitation_mm = sum(rain_sum) if rain_sum else None
+        total_precipitation_hours = sum(rain_hours) if rain_hours else None
+        max_wind_kmh = max(wind_max) if wind_max else None
+
+        return {
+            "status": "success",
+            "location_label": location_label,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "day_count": day_count,
+            "avg_temp_max_c": avg_temp_max,
+            "avg_temp_min_c": avg_temp_min,
+            "total_precipitation_mm": total_precipitation_mm,
+            "total_precipitation_hours": total_precipitation_hours,
+            "max_wind_kmh": max_wind_kmh,
+            "weather_codes": weather_codes,
+            "raw_daily": daily,
+        }
+
+    except requests.exceptions.HTTPError:
+        error_message = None
+        try:
+            error_payload = response.json()
+            error_message = error_payload.get("reason")
+        except Exception:
+            error_message = response.text
+
+        return {
+            "status": "error",
+            "location_label": location_label,
+            "message": f"Weather API request failed: {error_message}",
+        }
+
+    except requests.exceptions.Timeout:
+        return {
+            "status": "error",
+            "location_label": location_label,
+            "message": "Weather API request timed out.",
+        }
+
+    except requests.exceptions.RequestException as e:
+        return {
+            "status": "error",
+            "location_label": location_label,
+            "message": f"Weather API request failed: {str(e)}",
+        }
