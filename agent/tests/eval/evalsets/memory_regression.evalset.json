@@ -9,7 +9,7 @@
             "role": "user",
             "parts": [
               {
-                "text": "Given my ride preferences, what should I keep in mind for a ride this weekend?"
+                "text": "Based on my saved ride preferences, what kind of route should I choose for a day ride?"
               }
             ]
           }
