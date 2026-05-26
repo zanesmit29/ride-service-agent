@@ -176,10 +176,3 @@ http://127.0.0.1:8090/ui
 # Run the server E2E integration test
 .\.venv\Scripts\python.exe -m pytest tests/integration/test_server_e2e.py::test_chat_stream -q
 ```
-
-If you want one of those, tell me which and I will add it next.
-
-## Next steps I can take for you
-- Expand README with example agent interactions (short scripts) and a minimal test dataset.
-- Add a `dev` runner script to start a local MCP server and a tiny REPL client.
-- Help wire FastAPI to call the `root_agent` once you want the HTTP surface working.
