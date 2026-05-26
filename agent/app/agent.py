@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.tools.mcp_tool import McpToolset
@@ -22,17 +23,27 @@ from mcp import StdioServerParameters
 from .tools import insert_reminder, get_rider_profile, update_rider_preferences, get_weather_forecast
 from .prompts import ROOT_AGENT_INSTRUCTIONS, SERVICE_AGENT_INSTRUCTIONS, DIAGNOSTICS_AGENT_INSTRUCTIONS, TRIP_PLANNING_AGENT_INSTRUCTIONS
 
-load_dotenv()
+env_candidates = [
+    Path(__file__).resolve().parents[1] / ".env",
+    Path(__file__).resolve().parents[2] / ".env",
+]
+for env_path in env_candidates:
+    if env_path.exists():
+        load_dotenv(env_path)
 
-CONNECTION_STRING = os.getenv("MDB_MCP_CONNECTION_STRING")
-if not CONNECTION_STRING:
-    raise ValueError("MDB_MCP_CONNECTION_STRING is not set in the environment.")
+# Do not raise at import time; allow the environment to be configured at runtime.
+# Tools that need the connection string will validate and raise if it's missing.
 
-MONGO_MCP_ENV = {
-    "MDB_MCP_CONNECTION_STRING": CONNECTION_STRING,
-    "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
-    "MDB_MCP_TELEMETRY": "disabled",
-}
+
+def get_mongo_mcp_env() -> dict[str, str]:
+    connection_string = os.getenv("MDB_MCP_CONNECTION_STRING")
+    if not connection_string:
+        return {}
+    return {
+        "MDB_MCP_CONNECTION_STRING": connection_string,
+        "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
+        "MDB_MCP_TELEMETRY": "disabled",
+    }
 
 def build_mongo_toolset(tool_filter: list[str]) -> McpToolset:
     return McpToolset(
@@ -40,7 +51,7 @@ def build_mongo_toolset(tool_filter: list[str]) -> McpToolset:
             server_params=StdioServerParameters(
                 command="npx",
                 args=["-y", "mongodb-mcp-server"],
-                env=MONGO_MCP_ENV,
+                env=get_mongo_mcp_env(),
             ),
             timeout=120,
         ),
