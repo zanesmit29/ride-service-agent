@@ -1,0 +1,65 @@
+{
+  "eval_set_id": "trip_planning_v1",
+  "eval_cases": [
+    {
+      "eval_id": "trip_planning_relative_date_requires_clarification",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "I want to go tomorrow for 2 days from Veldhoven. The distance is 200km."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "trip_planning_missing_date_requires_clarification",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "I want to plan a 200km trip from Veldhoven."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "trip_planning_parseable_non_iso_date_proceeds",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "I want to go on 24/05/2026 for 2 days from Veldhoven. The distance is 200km."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "trip_planning_unparseable_date_requires_clarification",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "I want to go on 32/13/2026 for 2 days from Veldhoven. The distance is 200km."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
