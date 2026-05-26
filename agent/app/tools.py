@@ -3,7 +3,12 @@ from pymongo import MongoClient
 from datetime import datetime, timezone, date, timedelta
 import requests
 
-CONNECTION_STRING = os.getenv("MDB_MCP_CONNECTION_STRING")
+
+def get_connection_string() -> str:
+    connection_string = os.getenv("MDB_MCP_CONNECTION_STRING")
+    if not connection_string:
+        raise ValueError("MDB_MCP_CONNECTION_STRING is not set")
+    return connection_string
 
 
 def insert_reminder(service_type: str, due_km: int, due_date: str) -> dict:
@@ -19,10 +24,9 @@ def insert_reminder(service_type: str, due_km: int, due_date: str) -> dict:
     Returns:
         A dict confirming the reminder was logged
     """
-    if not CONNECTION_STRING:
-        raise ValueError("MDB_MCP_CONNECTION_STRING is not set")
+    connection_string = get_connection_string()
 
-    with MongoClient(CONNECTION_STRING) as client:
+    with MongoClient(connection_string) as client:
         db = client["ride_agent_db"]
         result = db["service_reminders"].insert_one({
             "service_type": service_type,
@@ -44,10 +48,9 @@ def get_rider_profile(user_id: str) -> dict:
     Returns:
         A dict containing the rider's profile information, or not_found
     """
-    if not CONNECTION_STRING:
-        raise ValueError("MDB_MCP_CONNECTION_STRING is not set")
+    connection_string = get_connection_string()
 
-    with MongoClient(CONNECTION_STRING) as client:
+    with MongoClient(connection_string) as client:
         db = client["ride_agent_db"]
         result = db["rider_profiles"].find_one(
             {"user_id": user_id},
@@ -103,8 +106,7 @@ def update_rider_preferences(
     Returns:
         A dict confirming which fields were updated.
     """
-    if not CONNECTION_STRING:
-        raise ValueError("MDB_MCP_CONNECTION_STRING is not set")
+    connection_string = get_connection_string()
 
     update_fields = {}
 
@@ -141,7 +143,7 @@ def update_rider_preferences(
 
     now = datetime.now(timezone.utc)
 
-    with MongoClient(CONNECTION_STRING) as client:
+    with MongoClient(connection_string) as client:
         db = client["ride_agent_db"]
         result = db["rider_profiles"].update_one(
             {"user_id": user_id},

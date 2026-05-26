@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ride Service Agent</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Spectral:wght@400;600&display=swap");
+
+      :root {
+        color-scheme: light;
+        --ink: #141212;
+        --muted: #5a514c;
+        --accent: #d2603a;
+        --accent-strong: #bf4f2b;
+        --surface: #f8f3ef;
+        --surface-strong: #efe6df;
+        --glass: rgba(255, 255, 255, 0.68);
+        --shadow: 0 18px 40px rgba(20, 18, 18, 0.12);
+        --radius: 18px;
+        --ring: rgba(210, 96, 58, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at top, #fff6ee, #f3e6dc 45%, #e8d9cc 100%);
+        min-height: 100vh;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+        max-width: 1100px;
+        margin: 32px auto 40px;
+        padding: 0 24px 40px;
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--glass);
+        border: 1px solid rgba(20, 18, 18, 0.08);
+        border-radius: var(--radius);
+        padding: 18px 22px;
+        backdrop-filter: blur(8px);
+        box-shadow: var(--shadow);
+      }
+
+      .title {
+        display: grid;
+        gap: 6px;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+
+      .title p {
+        margin: 0;
+        color: var(--muted);
+        font-family: "Spectral", "Georgia", serif;
+        font-size: 15px;
+      }
+
+      .meta {
+        display: grid;
+        gap: 10px;
+        align-items: start;
+        justify-items: end;
+      }
+
+      .meta label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .meta input {
+        width: min(240px, 60vw);
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(20, 18, 18, 0.12);
+        background: white;
+        font-family: inherit;
+      }
+
+      .meta input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--ring);
+      }
+
+      .panel {
+        background: var(--glass);
+        border-radius: var(--radius);
+        padding: 20px;
+        border: 1px solid rgba(20, 18, 18, 0.08);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .status {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #d2a77e;
+        box-shadow: 0 0 0 3px rgba(210, 167, 126, 0.2);
+      }
+
+      .status-dot.online {
+        background: #44b08b;
+        box-shadow: 0 0 0 3px rgba(68, 176, 139, 0.2);
+      }
+
+      .chat {
+        display: grid;
+        gap: 16px;
+        min-height: 400px;
+        max-height: 540px;
+        overflow: auto;
+        padding-right: 6px;
+      }
+
+      .message {
+        display: grid;
+        gap: 6px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: white;
+        border: 1px solid rgba(20, 18, 18, 0.08);
+        box-shadow: 0 10px 20px rgba(20, 18, 18, 0.08);
+        animation: slide-up 0.35s ease;
+      }
+
+      .message.user {
+        background: #1f1c1b;
+        color: #f8f3ef;
+        border-color: rgba(255, 255, 255, 0.08);
+      }
+
+      .message .role {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: inherit;
+        opacity: 0.7;
+      }
+
+      .message .text {
+        font-size: 15px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
+      .composer {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr;
+      }
+
+      .composer textarea {
+        width: 100%;
+        min-height: 110px;
+        border-radius: 14px;
+        padding: 12px 14px;
+        border: 1px solid rgba(20, 18, 18, 0.12);
+        resize: vertical;
+        font-family: inherit;
+        font-size: 15px;
+      }
+
+      .composer textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--ring);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 16px;
+        font-family: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        background: var(--accent);
+        color: white;
+        box-shadow: 0 8px 16px rgba(210, 96, 58, 0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(210, 96, 58, 0.35);
+      }
+
+      button.secondary {
+        background: #ede0d6;
+        color: var(--ink);
+        box-shadow: none;
+      }
+
+      button.secondary:hover {
+        box-shadow: 0 6px 14px rgba(20, 18, 18, 0.12);
+      }
+
+      .hint {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      @keyframes slide-up {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 720px) {
+        header {
+          align-items: flex-start;
+        }
+
+        .meta {
+          width: 100%;
+          justify-items: start;
+        }
+
+        .meta input {
+          width: 100%;
+        }
+
+        .chat {
+          max-height: 420px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="title">
+          <h1>Ride Service Agent</h1>
+          <p>Ask trip, service, and diagnostics questions right in the browser.</p>
+        </div>
+        <div class="meta">
+          <label for="userId">User ID</label>
+          <input id="userId" name="userId" placeholder="eval_user" />
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="status">
+          <div id="statusDot" class="status-dot"></div>
+          <div id="statusText">Not connected</div>
+        </div>
+      </section>
+
+      <section class="panel chat" id="chat"></section>
+
+      <section class="panel composer">
+        <textarea id="prompt" placeholder="Ask about service intervals, trip weather, or a symptom..."></textarea>
+        <div class="actions">
+          <div class="buttons">
+            <button id="sendBtn">Send</button>
+            <button id="newSessionBtn" class="secondary">New session</button>
+            <button id="clearBtn" class="secondary">Clear chat</button>
+          </div>
+          <div class="hint">Press Ctrl+Enter to send</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const chat = document.getElementById("chat");
+      const promptInput = document.getElementById("prompt");
+      const sendBtn = document.getElementById("sendBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const newSessionBtn = document.getElementById("newSessionBtn");
+      const statusDot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+      const userIdInput = document.getElementById("userId");
+
+      const appName = "app";
+      let sessionId = null;
+      let isStreaming = false;
+      let buffer = "";
+
+      const storedUserId = localStorage.getItem("ride-agent-user");
+      userIdInput.value = storedUserId || "eval_user";
+
+      function setStatus(text, online) {
+        statusText.textContent = text;
+        statusDot.classList.toggle("online", Boolean(online));
+      }
+
+      function addMessage(role, text) {
+        const wrapper = document.createElement("div");
+        wrapper.className = `message ${role}`;
+        const roleEl = document.createElement("div");
+        roleEl.className = "role";
+        roleEl.textContent = role === "user" ? "You" : "Agent";
+        const textEl = document.createElement("div");
+        textEl.className = "text";
+        textEl.textContent = text;
+        wrapper.appendChild(roleEl);
+        wrapper.appendChild(textEl);
+        chat.appendChild(wrapper);
+        chat.scrollTop = chat.scrollHeight;
+        return textEl;
+      }
+
+      function extractText(payload) {
+        const content = payload.content || (payload.data && payload.data.content);
+        const parts = (content && content.parts) || (content && content.data && content.data.parts) || [];
+        if (Array.isArray(parts) && parts.length) {
+          return parts.map((part) => part.text || "").join("");
+        }
+        if (typeof payload.text === "string") {
+          return payload.text;
+        }
+        return "";
+      }
+
+      async function createSession() {
+        const userId = userIdInput.value.trim() || "eval_user";
+        localStorage.setItem("ride-agent-user", userId);
+        setStatus("Starting session...", false);
+        const response = await fetch(`/apps/${appName}/users/${encodeURIComponent(userId)}/sessions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: { preferred_language: "English", visit_count: 1 } }),
+        });
+        if (!response.ok) {
+          throw new Error(`Session error: ${response.status}`);
+        }
+        const data = await response.json();
+        sessionId = data.id;
+        setStatus(`Session ready (${sessionId.slice(0, 8)}...)`, true);
+      }
+
+      async function sendMessage() {
+        if (isStreaming) {
+          return;
+        }
+        const message = promptInput.value.trim();
+        if (!message) {
+          return;
+        }
+        if (!sessionId) {
+          try {
+            await createSession();
+          } catch (error) {
+            setStatus("Failed to start session", false);
+            addMessage("assistant", `Session failed: ${error.message}`);
+            return;
+          }
+        }
+
+        promptInput.value = "";
+        addMessage("user", message);
+        const assistantTextEl = addMessage("assistant", "Thinking...");
+        isStreaming = true;
+        buffer = "";
+
+        try {
+          const response = await fetch("/run_sse", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              app_name: appName,
+              user_id: userIdInput.value.trim() || "eval_user",
+              session_id: sessionId,
+              new_message: {
+                role: "user",
+                parts: [{ text: message }],
+              },
+              streaming: true,
+            }),
+          });
+
+          if (!response.ok || !response.body) {
+            throw new Error(`Request error: ${response.status}`);
+          }
+
+          assistantTextEl.textContent = "";
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+              break;
+            }
+            const chunk = decoder.decode(value, { stream: true });
+            handleSseChunk(chunk, assistantTextEl);
+          }
+
+          isStreaming = false;
+          setStatus("Listening", true);
+        } catch (error) {
+          isStreaming = false;
+          assistantTextEl.textContent = `Error: ${error.message}`;
+          setStatus("Error", false);
+        }
+      }
+
+      function handleSseChunk(chunk, textEl) {
+        buffer += chunk;
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+
+        events.forEach((eventChunk) => {
+          const lines = eventChunk.split("\n").filter((line) => line.startsWith("data:"));
+          if (!lines.length) {
+            return;
+          }
+          const data = lines.map((line) => line.slice(5).trim()).join("\n");
+          if (!data || data === "[DONE]") {
+            return;
+          }
+          try {
+            const payload = JSON.parse(data);
+            const errorMessage = payload.error || payload.detail;
+            if (errorMessage) {
+              const errorText = typeof errorMessage === "string" ? errorMessage : JSON.stringify(errorMessage);
+              applyStreamUpdate(textEl, `Error: ${errorText}`);
+              return;
+            }
+            const text = extractText(payload);
+            if (!text) {
+              return;
+            }
+            applyStreamUpdate(textEl, text);
+          } catch (error) {
+            applyStreamUpdate(textEl, data);
+          }
+        });
+      }
+
+      function applyStreamUpdate(textEl, incoming) {
+        if (!incoming) {
+          return;
+        }
+        const current = textEl.textContent || "";
+        if (!current) {
+          textEl.textContent = incoming;
+          return;
+        }
+        if (incoming === current) {
+          return;
+        }
+        if (incoming.startsWith(current)) {
+          textEl.textContent = incoming;
+          return;
+        }
+        if (current.startsWith(incoming)) {
+          return;
+        }
+        textEl.textContent = current + incoming;
+      }
+
+      sendBtn.addEventListener("click", sendMessage);
+      clearBtn.addEventListener("click", () => {
+        chat.innerHTML = "";
+      });
+      newSessionBtn.addEventListener("click", async () => {
+        sessionId = null;
+        await createSession();
+      });
+      userIdInput.addEventListener("change", () => {
+        sessionId = null;
+      });
+      promptInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && event.ctrlKey) {
+          sendMessage();
+        }
+      });
+
+      setStatus("Ready", false);
+    </script>
+  </body>
+</html>

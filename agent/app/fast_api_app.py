@@ -13,19 +13,40 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 import google.auth
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from google.adk.cli.fast_api import get_fast_api_app
 from google.cloud import logging as google_cloud_logging
 
 from app.app_utils.telemetry import setup_telemetry
 from app.app_utils.typing import Feedback
 
+env_candidates = [
+    Path(__file__).resolve().parents[1] / ".env",
+    Path(__file__).resolve().parents[2] / ".env",
+]
+for env_path in env_candidates:
+    if env_path.exists():
+        load_dotenv(env_path)
+
 setup_telemetry()
-_, project_id = google.auth.default()
-logging_client = google_cloud_logging.Client()
-logger = logging_client.logger(__name__)
+try:
+    _, project_id = google.auth.default()
+except Exception:
+    project_id = None
+
+try:
+    logging_client = google_cloud_logging.Client()
+    logger = logging_client.logger(__name__)
+except Exception:
+    import logging as _logging
+
+    logger = _logging.getLogger(__name__)
 allow_origins = (
     os.getenv("ALLOW_ORIGINS", "").split(",") if os.getenv("ALLOW_ORIGINS") else None
 )
@@ -50,6 +71,8 @@ app: FastAPI = get_fast_api_app(
 app.title = "agent"
 app.description = "API for interacting with the Agent agent"
 
+UI_INDEX_PATH = Path(__file__).parent / "ui" / "index.html"
+
 
 @app.post("/feedback")
 def collect_feedback(feedback: Feedback) -> dict[str, str]:
@@ -63,6 +86,34 @@ def collect_feedback(feedback: Feedback) -> dict[str, str]:
     """
     logger.log_struct(feedback.model_dump(), severity="INFO")
     return {"status": "success"}
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    """Simple liveness probe for the service."""
+    return {"status": "ok"}
+
+
+@app.get("/ui")
+def ui() -> FileResponse:
+    """Serve the lightweight chat UI."""
+    return FileResponse(UI_INDEX_PATH)
+
+
+@app.get("/ready")
+def readiness_check() -> dict[str, object]:
+    """Readiness probe. Reports whether optional external wiring is configured.
+
+    - `mdb_configured`: True when `MDB_MCP_CONNECTION_STRING` is set in env.
+    """
+    mdb_configured = bool(os.environ.get("MDB_MCP_CONNECTION_STRING"))
+    return {"ready": True, "mdb_configured": mdb_configured}
+
+
+@app.get("/readyz")
+def readiness_check_alias() -> dict[str, object]:
+    """Alias for readiness probe to avoid conflicts with platform reserved paths."""
+    return {"ready": True, "mdb_configured": bool(os.environ.get("MDB_MCP_CONNECTION_STRING"))}
 
 
 # Main execution

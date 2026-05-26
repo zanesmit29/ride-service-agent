@@ -4,10 +4,10 @@ A personal motorcycle reliability agent built with Gemini and the Google ADK.
 
 Status: Work in progress — the FastAPI integration is not fully wired yet. The primary development focus is the agent implementation contained in `agent/app/agent.py`, `agent/app/tools.py`, and `agent/app/prompts.py`.
 
-Overview
+## Overview
 This repository contains the core agent logic for a motorcycle assistant. The agents coordinate to provide maintenance advice, trip-readiness checks, reminders, and symptom-based diagnostics using a MongoDB-backed data model. The FastAPI app exists but is currently secondary and may not be fully operational in this branch.
 
-Key files (focus)
+## Key files (focus)
 
 - `agent/app/agent.py` — agent definitions and composition
 	- Defines three main Agent instances:
@@ -36,14 +36,16 @@ Key files (focus)
 		- `DIAGNOSTICS_AGENT` instructions for symptom extraction and matching against `motorbike_issues`.
 		- Database schema expectations and collection names under the `DATABASE_RULES` block (e.g., `ride_logs`, `service_intervals`, `service_reminders`, `parts_stock`, `motorbike_issues`).
 
-Environment & prerequisites (agent-focused)
+## Environment & prerequisites (agent-focused)
 
 - Python 3.10–3.13
 - Node.js (for `npx`) — required to run `mongodb-mcp-server` when using the MCP toolset locally
 - A running MongoDB instance and connection string for `MDB_MCP_CONNECTION_STRING` (or use the MCP server helper)
 - Optional: a `.env` file with `MDB_MCP_CONNECTION_STRING` for local development
 
-Installing Python dependencies
+## Setup
+
+### Installing Python dependencies
 
 ```bash
 python -m venv .venv
@@ -56,7 +58,7 @@ cd agent
 pip install -e .
 ```
 
-Running the MCP server (local toolset)
+### Running the MCP server (local toolset)
 
 The agent code expects an MCP server to be available; the agent configuration launches `npx -y mongodb-mcp-server` when the toolset is invoked. You can run the server separately for debugging:
 
@@ -70,7 +72,7 @@ npx -y mongodb-mcp-server
 # npx -y mongodb-mcp-server
 ```
 
-Testing agent tools locally
+### Testing agent tools locally
 - Ensure `MDB_MCP_CONNECTION_STRING` is set and points to a test database with the expected collections.
 - From a Python REPL you can import the agents and call them programmatically (the project does not yet ship an interactive runner):
 
@@ -79,7 +81,7 @@ from app.agent import root_agent
 # Use root_agent.run(...) or the ADK APIs to send a message to the agent (see ADK docs)
 ```
 
-**Agent tools & direct usage**
+## Agent tools & direct usage
 
 - **Environment:** `MDB_MCP_CONNECTION_STRING` must be set (or use the MCP helper launched by the code). The agent code also configures a helper MCP server process with `MONGO_MCP_ENV` when launching `mongodb-mcp-server` (see `agent/app/agent.py`).
 - **Toolset behavior:** The code builds an `McpToolset` that launches `npx -y mongodb-mcp-server` and restricts allowed DB operations (e.g., `find`, `aggregate`, `collection-schema`).
@@ -106,14 +108,78 @@ print(resp)
 	- `diagnostics_agent` — attached tools: Mongo MCP toolset (for issue lookups and schema discovery).
 	- `root_agent` — attached tools: `get_rider_profile`, `update_rider_preferences`; routes requests to the two specialist agents.
 
-Notes
+## Notes
 - `insert_reminder` in `tools.py` performs a direct `pymongo` insert into `ride_agent_db.service_reminders` and closes the client — ensure your connection string and DB permissions are correct.
 - `prompts.py` contains the authoritative domain rules and expected collection schemas; if you modify the DB layout, update these rules accordingly.
 - FastAPI (`agent/app/fast_api_app.py`) is present but not the immediate focus — current work is on agent behavior and tooling.
 
-Next steps I can take for you
+## Run & test
+
+Quick commands to run the server and tests locally (Windows PowerShell examples):
+
+1. Create and activate a virtual environment
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+2. Install the package (and optionally test/dev deps)
+
+```powershell
+# Install runtime deps
+pip install -e .
+# Install test deps (optional)
+pip install -e .[dev] || pip install pytest pytest-asyncio
+```
+
+3. Run the FastAPI server (development)
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
+```
+
+### Testing the web UI & ADK integration
+
+The custom UI is served by FastAPI at `/ui`. The ADK web UI and the FastAPI UI must run on different ports.
+
+Example (Windows PowerShell):
+
+```powershell
+# Start ADK web on 8000
+adk web agent --port 8000
+
+# Start FastAPI UI on 8090 (must be different from ADK)
+.\.venv\Scripts\python.exe -m uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8090
+```
+
+Open the custom UI at:
+
+```
+http://127.0.0.1:8090/ui
+```
+
+4. Quick health/readiness checks
+
+```powershell
+# Liveness
+.\.venv\Scripts\python.exe -c "import requests; print(requests.get('http://127.0.0.1:8000/health').json())"
+# Readiness (shows whether MDB_MCP_CONNECTION_STRING is set)
+.\.venv\Scripts\python.exe -c "import requests; print(requests.get('http://127.0.0.1:8000/ready').json())"
+```
+
+5. Run integration tests (requires `pytest`)
+
+```powershell
+# Run all tests
+.\.venv\Scripts\python.exe -m pytest
+# Run the server E2E integration test
+.\.venv\Scripts\python.exe -m pytest tests/integration/test_server_e2e.py::test_chat_stream -q
+```
+
+If you want one of those, tell me which and I will add it next.
+
+## Next steps I can take for you
 - Expand README with example agent interactions (short scripts) and a minimal test dataset.
 - Add a `dev` runner script to start a local MCP server and a tiny REPL client.
 - Help wire FastAPI to call the `root_agent` once you want the HTTP surface working.
-
-If you want one of those, tell me which and I will add it next.
