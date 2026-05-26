@@ -135,6 +135,10 @@ dmypy.json
 # ty (Astral's type checker)
 .ty/
 
+
+# Project Plan
+PLAN.md
+
 # Pyre type checker
 .pyre/
 
