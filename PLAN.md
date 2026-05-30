@@ -5,10 +5,11 @@ Next steps (recommended order):
 1. Improve the trip-planning agent.
 	Approach: tighten date/origin validation, strengthen candidate scoring, and standardize outputs (best option, comparison, rationale).
 	Execution:
-	- [ ] Add targeted eval cases for date parsing and weather-preference routing.
-	- [ ] Normalize relative date handling into exact YYYY-MM-DD before any DB calls.
-	- [ ] Add a simple scoring rubric (temp, wind, rain) to compare candidates consistently.
-	- [ ] Ensure output always includes a single recommendation plus brief comparison.
+	- [x] Add targeted eval cases for date parsing and weather-preference routing.
+	- [x] Normalize relative date handling into exact YYYY-MM-DD before any DB calls.
+	- [x] Add a simple scoring rubric (temp, wind, rain) to compare candidates consistently.
+	- [x] Ensure output always includes a single recommendation plus brief comparison.
+	- [x] Ensure that the output format is consistent and easy to render in the UI
 
 2. Significantly improve the UI so it feels like a production-grade motorcycle co-pilot application.
 	Approach: elevate layout, typography, and interaction flow; add clarity for session state and streaming.

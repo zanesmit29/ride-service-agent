@@ -208,13 +208,29 @@ TRIP_PLANNING_WORKFLOW = """
 Workflow:
 1. Read rider preferences from memory, especially weather preferences.
 2. Identify the trip origin, start date, and trip duration or end date from the user's request.
-3. Query trip_candidates in ride_agent_db and retrieve all active candidates.
-4. Call the weather tool for each active trip candidate.
-5. Return:
+3. Normalize start and end dates to YYYY-MM-DD once known.
+4. Query trip_candidates in ride_agent_db and retrieve all active candidates.
+5. Call the weather tool for each active trip candidate.
+6. Score each candidate using the scoring rubric.
+7. Return:
    - the best destination or direction
    - a short comparison of the candidates
    - a brief reason tied to the rider's weather preference
    - a short note if forecast confidence is limited
+"""
+
+TRIP_PLANNING_SCORING = """
+Scoring rubric:
+- Score each candidate from 0 to 10.
+- Temperature comfort:
+   - If avoid_cold_below_c is set and avg_temp_min_c < avoid_cold_below_c, subtract 3.
+   - If max_heat_c is set and avg_temp_max_c > max_heat_c, subtract 3.
+- Rain penalty:
+   - If avoid_heavy_rain is true and total_precipitation_mm > 5, subtract 3.
+   - If avoid_heavy_rain is true and total_precipitation_hours > 2, subtract 1.
+- Wind penalty:
+   - If avoid_strong_wind is true and max_wind_kmh > 35, subtract 2.
+- If weather preferences are missing, favor higher avg_temp_min_c and lower precipitation and wind.
 """
 
 TRIP_PLANNING_HARD_RULES = """
@@ -227,6 +243,7 @@ Hard rules:
 - If both trip duration in days and exact end date are missing, ask one short clarifying question.
 - If a provided date cannot be interpreted as a valid calendar date, ask the user to restate it in YYYY-MM-DD format.
 - If the user provides a recognizable explicit calendar date in another common format, normalize it internally and continue.
+- Normalize all accepted dates to exact YYYY-MM-DD strings before any database or weather tool calls.
 - Do not call find or get_weather_forecast unless:
   - origin is present,
   - start date is known as an exact calendar date,
@@ -242,6 +259,7 @@ Output rules:
 - Highlight urgent items first.
 - After a trip-planning response, you may offer one short optional next step such as a maintenance or trip-readiness check, but only as an offer, not as unsolicited analysis.
 - End with one clear next action or question when appropriate.
+- If a specialist agent returns structured output in the session state (for example keys `service_advice`, `diagnosis`, or `trip_planning_advice`), include that text verbatim as the primary plain‑text response in the chat body. Do not leave the content only in state metadata — echo it so the user sees the result.
 """
 
 
@@ -268,9 +286,10 @@ Output rules:
 TRIP_PLANNING_AGENT_OUTPUT_RULES = """
 Output rules:
 - Be concise and practical.
-- Recommend one best destination or direction first.
-- Briefly compare the available candidates when enough weather data exists.
-- Mention the rider weather preference when it influenced the choice.
+- Always return the trip-planning result as three labeled paragraphs in this exact order and with these exact labels: "Recommendation:", "Comparison:", "Why:". Each label must start a new paragraph (i.e., a paragraph break between each section).
+- `Recommendation:` must pick exactly one best destination or direction and state it on the same paragraph as the label.
+- `Comparison:` must mention at least one alternative candidate (or explicitly state that only one active candidate exists) and provide a brief comparative sentence or two.
+- `Why:` must mention at least one weather metric (e.g., temperature, precipitation, wind) and the rider's weather preference when it influenced the choice.
 - Do not invent exact roads, routes, or stop points.
 """
 
@@ -301,5 +320,6 @@ TRIP_PLANNING_AGENT_INSTRUCTIONS = "\n\n".join([
       DATABASE_RULES,
       TRIP_PLANNING_HARD_RULES,
       TRIP_PLANNING_WORKFLOW,
+      TRIP_PLANNING_SCORING,
       TRIP_PLANNING_AGENT_OUTPUT_RULES
 ])

@@ -32,6 +32,36 @@
       ]
     },
     {
+      "eval_id": "trip_planning_missing_origin_requires_clarification",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "I want to go on 2026-06-10 for 2 days. The distance is 200km."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "trip_planning_weather_preference_routing",
+      "conversation": [
+        {
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "I want to ride from Veldhoven on 2026-06-10 for 2 days. I prefer to avoid heavy rain and strong wind. The distance is 200km."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "eval_id": "trip_planning_parseable_non_iso_date_proceeds",
       "conversation": [
         {
