@@ -3,142 +3,461 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ride Service Agent</title>
+    <title>Motorcycle Copilot</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Spectral:wght@400;600&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Spectral:wght@400;600;700&display=swap");
 
       :root {
-        color-scheme: light;
-        --ink: #141212;
-        --muted: #5a514c;
-        --accent: #d2603a;
-        --accent-strong: #bf4f2b;
-        --surface: #f8f3ef;
-        --surface-strong: #efe6df;
-        --glass: rgba(255, 255, 255, 0.68);
-        --shadow: 0 18px 40px rgba(20, 18, 18, 0.12);
-        --radius: 18px;
-        --ring: rgba(210, 96, 58, 0.22);
+        color-scheme: dark;
+        --bg: #090909;
+        --bg-soft: #121214;
+        --panel: rgba(18, 18, 20, 0.82);
+        --panel-strong: rgba(28, 28, 32, 0.96);
+        --text: #f5efe9;
+        --muted: #a8a0a0;
+        --accent: #ff5533;
+        --accent-2: #ff8f5c;
+        --accent-glow: rgba(255, 85, 51, 0.22);
+        --line: rgba(255, 255, 255, 0.08);
+        --shadow: 0 28px 70px rgba(0, 0, 0, 0.5);
+        --radius-xl: 28px;
+        --radius-lg: 22px;
+        --radius-md: 16px;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html {
+        scroll-behavior: smooth;
+      }
+
       body {
         margin: 0;
-        font-family: "Space Grotesk", "Segoe UI", sans-serif;
-        color: var(--ink);
-        background: radial-gradient(circle at top, #fff6ee, #f3e6dc 45%, #e8d9cc 100%);
         min-height: 100vh;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% 20%, rgba(255, 85, 51, 0.18), transparent 28%),
+          radial-gradient(circle at 82% 12%, rgba(255, 143, 92, 0.12), transparent 24%),
+          linear-gradient(160deg, #080808 0%, #0f1014 52%, #0b0b0d 100%);
+        overflow-x: hidden;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: auto;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      body::before {
+        width: 34rem;
+        height: 34rem;
+        left: -12rem;
+        top: -8rem;
+        background: radial-gradient(circle, rgba(255, 85, 51, 0.12), transparent 65%);
+        filter: blur(12px);
+      }
+
+      body::after {
+        width: 30rem;
+        height: 30rem;
+        right: -10rem;
+        bottom: -10rem;
+        background: radial-gradient(circle, rgba(255, 143, 92, 0.08), transparent 70%);
+        filter: blur(12px);
       }
 
       .shell {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 24px;
-        max-width: 1100px;
-        margin: 32px auto 40px;
-        padding: 0 24px 40px;
+        position: relative;
+        z-index: 1;
+        width: min(1280px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 18px 0 40px;
       }
 
-      header {
+      .landing,
+      .app {
+        transition: opacity 220ms ease, transform 220ms ease;
+      }
+
+      .landing {
+        min-height: calc(100vh - 40px);
+        display: grid;
+        place-items: center;
+      }
+
+      .landing.hidden,
+      .app.hidden {
+        opacity: 0;
+        transform: translateY(8px);
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+      }
+
+      .landing-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 28px;
+        align-items: center;
+        width: 100%;
+        padding: 28px;
+        border-radius: 34px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        animation: cardIn 720ms cubic-bezier(0.2, 0.9, 0.2, 1);
+      }
+
+      .landing-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255, 85, 51, 0.06), transparent 42%, rgba(255, 143, 92, 0.06));
+        pointer-events: none;
+      }
+
+      .landing-copy {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 18px;
+        max-width: 100%;
+        animation: rise 720ms cubic-bezier(0.2, 0.9, 0.2, 1) 60ms both;
+      }
+
+      .brand-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        width: fit-content;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 12px;
+      }
+
+      .brand-mark {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 0 18px var(--accent-glow);
+      }
+
+      .landing h1 {
+        margin: 0;
+        font-size: clamp(3rem, 6vw, 6.4rem);
+        line-height: 0.92;
+        letter-spacing: -0.05em;
+        text-transform: uppercase;
+        max-width: 10ch;
+      }
+
+      .landing h1 span {
+        color: var(--accent);
+        text-shadow: 0 0 30px rgba(255, 85, 51, 0.16);
+      }
+
+      .landing-lead {
+        margin: 0;
+        max-width: 58ch;
+        color: rgba(245, 239, 233, 0.8);
+        font-size: 1.05rem;
+        line-height: 1.7;
+      }
+
+      .hero-actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 18px;
+        gap: 12px;
         align-items: center;
-        justify-content: space-between;
-        background: var(--glass);
-        border: 1px solid rgba(20, 18, 18, 0.08);
-        border-radius: var(--radius);
-        padding: 18px 22px;
-        backdrop-filter: blur(8px);
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-family: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, var(--accent), #ff6a44 55%, var(--accent-2));
+        color: white;
+        box-shadow: 0 16px 30px rgba(255, 85, 51, 0.28);
+      }
+
+      .secondary {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      .hero-notes {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .note {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--line);
+      }
+
+      .note strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.92rem;
+      }
+
+      .note span {
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      .note:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 85, 51, 0.24);
+      }
+
+      .landing-footer {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .landing-footer span {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--line);
+      }
+
+      .landing-footer span:hover {
+        border-color: rgba(255, 85, 51, 0.28);
+        color: var(--text);
+      }
+
+      .app {
+        display: grid;
+        gap: 18px;
+      }
+
+      .app.hidden {
+        position: absolute;
+        inset: 0;
+      }
+
+      .topbar,
+      .statusbar,
+      .workspace,
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        backdrop-filter: blur(18px);
         box-shadow: var(--shadow);
       }
 
-      .title {
+      .topbar {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 20px;
+        border-radius: 22px;
+        animation: panelLift 420ms ease;
+      }
+
+      .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--accent), #ffb38b);
+        box-shadow: 0 12px 30px rgba(255, 85, 51, 0.22);
+      }
+
+      .brand-copy {
+        display: grid;
+        gap: 2px;
+      }
+
+      .brand-copy strong {
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-copy span {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .topbar-right {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: flex-end;
+      }
+
+      .field {
         display: grid;
         gap: 6px;
       }
 
-      .title h1 {
-        margin: 0;
-        font-size: 28px;
-        letter-spacing: -0.02em;
-      }
-
-      .title p {
-        margin: 0;
+      .field label {
         color: var(--muted);
-        font-family: "Spectral", "Georgia", serif;
-        font-size: 15px;
-      }
-
-      .meta {
-        display: grid;
-        gap: 10px;
-        align-items: start;
-        justify-items: end;
-      }
-
-      .meta label {
-        font-size: 12px;
+        font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.12em;
-        color: var(--muted);
       }
 
-      .meta input {
-        width: min(240px, 60vw);
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(20, 18, 18, 0.12);
-        background: white;
+      select {
+        min-width: 180px;
+        padding: 11px 12px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
         font-family: inherit;
       }
 
-      .meta input:focus {
+      select:focus,
+      textarea:focus,
+      button:focus {
         outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--ring);
+        box-shadow: 0 0 0 3px rgba(255, 85, 51, 0.18);
       }
 
-      .panel {
-        background: var(--glass);
-        border-radius: var(--radius);
-        padding: 20px;
-        border: 1px solid rgba(20, 18, 18, 0.08);
-        box-shadow: var(--shadow);
-        backdrop-filter: blur(10px);
-      }
-
-      .status {
+      .statusbar {
         display: flex;
-        gap: 10px;
         align-items: center;
-        font-size: 14px;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 18px;
+        border-radius: 18px;
+        animation: panelLift 460ms ease 40ms both;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
         color: var(--muted);
+        font-size: 0.92rem;
       }
 
       .status-dot {
-        width: 10px;
-        height: 10px;
+        width: 11px;
+        height: 11px;
         border-radius: 50%;
-        background: #d2a77e;
-        box-shadow: 0 0 0 3px rgba(210, 167, 126, 0.2);
+        background: #777;
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.03);
       }
 
       .status-dot.online {
-        background: #44b08b;
-        box-shadow: 0 0 0 3px rgba(68, 176, 139, 0.2);
+        background: #41c28e;
+        box-shadow: 0 0 0 4px rgba(65, 194, 142, 0.18);
+      }
+
+      .status-dot.streaming {
+        background: #4d8cff;
+        box-shadow: 0 0 0 4px rgba(77, 140, 255, 0.18);
+        animation: pulse 1.4s infinite;
+      }
+
+      .status-dot.error {
+        background: #ff5959;
+        box-shadow: 0 0 0 4px rgba(255, 89, 89, 0.18);
+      }
+
+      .status-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 18px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        animation: panelLift 480ms ease 80ms both;
+      }
+
+      .tab {
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        padding: 10px 16px;
+      }
+
+      .tab.active {
+        background: linear-gradient(135deg, rgba(255, 85, 51, 0.16), rgba(255, 143, 92, 0.1));
+        border-color: rgba(255, 85, 51, 0.28);
+        color: var(--text);
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1.28fr) minmax(300px, 0.72fr);
+        gap: 16px;
+        border-radius: 24px;
+        padding: 16px;
+        animation: panelLift 520ms ease 120ms both;
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.active {
+        display: grid;
+        gap: 16px;
+        animation: panelIn 220ms ease;
+      }
+
+      .copilot-layout {
+        grid-template-rows: minmax(420px, 1fr) auto;
       }
 
       .chat {
-        display: grid;
-        gap: 16px;
-        min-height: 400px;
-        max-height: 540px;
+        min-height: 440px;
+        max-height: 62vh;
         overflow: auto;
+        display: grid;
+        gap: 14px;
         padding-right: 6px;
       }
 
@@ -146,62 +465,67 @@
         display: grid;
         gap: 6px;
         padding: 14px 16px;
-        border-radius: 16px;
-        background: white;
-        border: 1px solid rgba(20, 18, 18, 0.08);
-        box-shadow: 0 10px 20px rgba(20, 18, 18, 0.08);
-        animation: slide-up 0.35s ease;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+        animation: rise 220ms ease;
       }
 
       .message.user {
-        background: #1f1c1b;
-        color: #f8f3ef;
-        border-color: rgba(255, 255, 255, 0.08);
+        background: linear-gradient(135deg, rgba(255, 85, 51, 0.22), rgba(255, 85, 51, 0.12));
+        border-color: rgba(255, 85, 51, 0.2);
       }
 
-      .message .role {
-        font-size: 12px;
+      .role {
+        font-size: 0.72rem;
+        letter-spacing: 0.16em;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: inherit;
-        opacity: 0.7;
+        color: rgba(245, 239, 233, 0.6);
       }
 
-      .message .text {
-        font-size: 15px;
-        line-height: 1.55;
+      .text {
+        font-size: 0.98rem;
+        line-height: 1.65;
         white-space: pre-wrap;
+      }
+
+      .timestamp {
+        font-size: 0.76rem;
+        color: var(--muted);
+      }
+
+      .skeleton {
+        height: 16px;
+        width: min(280px, 90%);
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.06) 20%, rgba(255,255,255,0.16) 48%, rgba(255,255,255,0.06) 76%);
+        background-size: 200% 100%;
+        animation: shimmer 1.2s linear infinite;
       }
 
       .composer {
         display: grid;
         gap: 12px;
-        grid-template-columns: 1fr;
       }
 
-      .composer textarea {
+      textarea {
         width: 100%;
-        min-height: 110px;
-        border-radius: 14px;
-        padding: 12px 14px;
-        border: 1px solid rgba(20, 18, 18, 0.12);
+        min-height: 120px;
         resize: vertical;
-        font-family: inherit;
-        font-size: 15px;
-      }
-
-      .composer textarea:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--ring);
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        padding: 14px 16px;
+        font: inherit;
       }
 
       .actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
       }
 
       .buttons {
@@ -210,40 +534,144 @@
         gap: 10px;
       }
 
-      button {
-        border: none;
-        border-radius: 999px;
-        padding: 10px 16px;
-        font-family: inherit;
-        font-weight: 600;
-        cursor: pointer;
-        background: var(--accent);
-        color: white;
-        box-shadow: 0 8px 16px rgba(210, 96, 58, 0.3);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-      }
-
-      button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 22px rgba(210, 96, 58, 0.35);
-      }
-
-      button.secondary {
-        background: #ede0d6;
-        color: var(--ink);
-        box-shadow: none;
-      }
-
-      button.secondary:hover {
-        box-shadow: 0 6px 14px rgba(20, 18, 18, 0.12);
-      }
-
       .hint {
-        font-size: 13px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .side-column {
+        display: grid;
+        gap: 16px;
+      }
+
+      .panel {
+        border-radius: 22px;
+        padding: 18px;
+        animation: panelLift 420ms ease;
+      }
+
+      .panel h3 {
+        margin: 0 0 12px;
+        font-size: 0.92rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
         color: var(--muted);
       }
 
-      @keyframes slide-up {
+      .chip-grid,
+      .stat-grid,
+      .list-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stat,
+      .chip,
+      .list-item,
+      .profile-row {
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 14px;
+      }
+
+      .stat strong,
+      .chip strong,
+      .list-item strong,
+      .profile-row strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.96rem;
+      }
+
+      .stat span,
+      .chip span,
+      .list-item span,
+      .profile-row span {
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
+      .tabs-extra {
+        display: grid;
+        gap: 16px;
+      }
+
+      .refresh-bar {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .blank-state {
+        display: grid;
+        gap: 10px;
+        min-height: 180px;
+        place-content: center;
+        text-align: center;
+        color: var(--muted);
+        border: 1px dashed rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .tab-panel h4 {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+
+      .tab-panel p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .floating-line {
+        position: fixed;
+        inset: auto 0 16px;
+        z-index: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(255, 85, 51, 0.35), transparent);
+        animation: sweep 7s linear infinite;
+        pointer-events: none;
+      }
+
+      @keyframes shimmer {
+        from { background-position: 180% 0; }
+        to { background-position: -180% 0; }
+      }
+
+      @keyframes sweep {
+        from { transform: translateX(-25%); }
+        to { transform: translateX(25%); }
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.18); }
+        100% { transform: scale(1); }
+      }
+
+      @keyframes panelIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes rise {
         from {
           opacity: 0;
           transform: translateY(6px);
@@ -254,62 +682,310 @@
         }
       }
 
+      @keyframes cardIn {
+        from {
+          opacity: 0;
+          transform: translateY(16px) scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes panelLift {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+
+        .hero-visual {
+          animation: none;
+        }
+      }
+
+      @media (max-width: 1024px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+      }
+
       @media (max-width: 720px) {
-        header {
-          align-items: flex-start;
+        .shell {
+          width: min(100vw - 18px, 1280px);
+          padding-top: 10px;
         }
 
-        .meta {
-          width: 100%;
-          justify-items: start;
+        .landing h1 {
+          font-size: clamp(2.5rem, 14vw, 4.2rem);
         }
 
-        .meta input {
+        .hero-notes,
+        .stat-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .landing-card {
+          padding: 16px;
+          border-radius: 24px;
+          gap: 18px;
+        }
+
+        .hero-actions,
+        .landing-footer {
+          gap: 10px;
+        }
+
+        .hero-actions button,
+        .landing-footer span {
           width: 100%;
+          justify-content: center;
+          text-align: center;
+        }
+
+        .hero-visual {
+          min-height: 320px;
+          border-radius: 22px;
+        }
+
+        .hero-card {
+          left: 12px;
+          bottom: 12px;
+          width: calc(100% - 24px);
+        }
+
+        .topbar,
+        .statusbar {
+          padding: 14px;
+          border-radius: 18px;
+        }
+
+        .topbar-left,
+        .topbar-right {
+          width: 100%;
+        }
+
+        .topbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .statusbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .tabs {
+          padding: 8px;
+        }
+
+        .tab {
+          flex: 1 1 calc(50% - 8px);
+        }
+
+        .workspace {
+          grid-template-columns: 1fr;
         }
 
         .chat {
-          max-height: 420px;
+          min-height: 360px;
+          max-height: none;
+        }
+
+        .actions {
+          align-items: stretch;
+        }
+
+        select,
+        .status-controls button,
+        .actions button {
+          width: 100%;
+        }
+
+        .buttons,
+        .status-controls {
+          width: 100%;
+        }
+
+        .workspace {
+          padding: 12px;
         }
       }
     </style>
   </head>
   <body>
-    <div class="shell">
-      <header>
-        <div class="title">
-          <h1>Ride Service Agent</h1>
-          <p>Ask trip, service, and diagnostics questions right in the browser.</p>
-        </div>
-        <div class="meta">
-          <label for="userId">User ID</label>
-          <input id="userId" name="userId" placeholder="eval_user" />
-        </div>
-      </header>
-
-      <section class="panel">
-        <div class="status">
-          <div id="statusDot" class="status-dot"></div>
-          <div id="statusText">Not connected</div>
-        </div>
-      </section>
-
-      <section class="panel chat" id="chat"></section>
-
-      <section class="panel composer">
-        <textarea id="prompt" placeholder="Ask about service intervals, trip weather, or a symptom..."></textarea>
-        <div class="actions">
-          <div class="buttons">
-            <button id="sendBtn">Send</button>
-            <button id="newSessionBtn" class="secondary">New session</button>
-            <button id="clearBtn" class="secondary">Clear chat</button>
+    <div class="floating-line"></div>
+    <main class="shell">
+      <section id="landing" class="landing">
+        <div class="landing-card">
+          <div class="landing-copy">
+            <div class="brand-row"><span class="brand-mark"></span> Motorcycle copilot</div>
+            <h1>Swift control for every ride.</h1>
+            <p class="landing-lead">
+              A quick overview of the app before you enter the cockpit. Start with Copilot for live ride help, then use the
+              tabs to check vehicle status, open reminders, review trips, and view your profile.
+            </p>
+            <div class="hero-actions">
+              <button id="getStartedBtn" class="primary">Get started</button>
+            </div>
+            <div class="hero-notes">
+              <div class="note">
+                <strong>Copilot</strong>
+                <span>Ask route questions, get ride advice, and keep the chat focused on the trip you want to make.</span>
+              </div>
+              <div class="note">
+                <strong>Vehicle</strong>
+                <span>Check ride status at a glance, including the latest odometer reading and service highlight.</span>
+              </div>
+              <div class="note">
+                <strong>Reminders</strong>
+                <span>See open maintenance items so small jobs do not get missed before your next ride.</span>
+              </div>
+              <div class="note">
+                <strong>Trips</strong>
+                <span>Review recent ride history, totals, and weather patterns to help plan the next run.</span>
+              </div>
+              <div class="note">
+                <strong>Profile</strong>
+                <span>Look over rider preferences so the experience stays tuned to how you like to ride.</span>
+              </div>
+            </div>
+            <div class="landing-footer">
+              <span>Copilot</span>
+              <span>Vehicle</span>
+              <span>Reminders</span>
+              <span>Trips</span>
+              <span>Profile</span>
+            </div>
           </div>
-          <div class="hint">Press Ctrl+Enter to send</div>
         </div>
       </section>
-    </div>
+
+      <section id="app" class="app hidden">
+        <header class="topbar">
+          <div class="topbar-left">
+            <div class="logo"></div>
+            <div class="brand-copy">
+              <strong>Motorcycle Copilot</strong>
+              <span>Live trip guidance, service check-ins, and ride context</span>
+            </div>
+          </div>
+
+          <div class="topbar-right">
+            <div class="field">
+              <label for="userId">User ID</label>
+              <select id="userId" name="userId">
+                <option value="eval_user">eval_user</option>
+                <option value="rider_one">rider_one</option>
+                <option value="rider_two">rider_two</option>
+              </select>
+            </div>
+            <div class="status-controls">
+              <button id="newSessionBtn" class="secondary">New session</button>
+              <button id="clearBtn" class="secondary">Clear chat</button>
+            </div>
+          </div>
+        </header>
+
+        <section class="statusbar">
+          <div class="status-pill">
+            <span id="statusDot" class="status-dot"></span>
+            <span id="statusText">Not connected</span>
+          </div>
+          <div class="muted">Press Ctrl+Enter to send</div>
+        </section>
+
+        <nav class="tabs" aria-label="App sections">
+          <button class="tab active" data-tab="copilot">Copilot</button>
+          <button class="tab" data-tab="vehicle">Vehicle</button>
+          <button class="tab" data-tab="reminders">Reminders</button>
+          <button class="tab" data-tab="trips">Trips</button>
+          <button class="tab" data-tab="profile">Profile</button>
+        </nav>
+
+        <section class="workspace">
+          <div id="copilot" class="tab-panel active copilot-layout">
+            <section class="panel chat" id="chat"></section>
+            <section class="panel composer">
+              <textarea id="prompt" placeholder="Ask about service intervals, trip weather, or a symptom..."></textarea>
+              <div class="actions">
+                <div class="buttons">
+                  <button id="sendBtn" class="primary">Send</button>
+                </div>
+                <div class="hint">The copilot chat keeps the current backend session + SSE wiring.</div>
+              </div>
+            </section>
+          </div>
+
+          <aside class="side-column">
+            <section id="vehicle" class="tab-panel panel">
+              <div class="refresh-bar">
+                <button class="secondary tab-refresh" data-tab="vehicle">Refresh view</button>
+              </div>
+              <h4>Vehicle status</h4>
+              <p>Latest ride context rendered as a sporty dashboard panel.</p>
+              <div class="stat-grid">
+                <div class="stat"><strong>Odometer</strong><span>18,240 km · last ride updated 2 days ago</span></div>
+                <div class="stat"><strong>Service</strong><span>Next check in 480 km · brake inspection highlighted</span></div>
+              </div>
+            </section>
+
+            <section id="reminders" class="tab-panel panel">
+              <div class="refresh-bar">
+                <button class="secondary tab-refresh" data-tab="reminders">Refresh view</button>
+              </div>
+              <h4>Reminders</h4>
+              <p>Open service reminders, staged as a clean frontend placeholder.</p>
+              <div class="list-grid">
+                <div class="list-item"><strong>Chain lube</strong><span>Due soon · status open</span></div>
+                <div class="list-item"><strong>Tire pressure</strong><span>Check before next ride · status open</span></div>
+              </div>
+            </section>
+
+            <section id="trips" class="tab-panel panel">
+              <div class="refresh-bar">
+                <button class="secondary tab-refresh" data-tab="trips">Refresh view</button>
+              </div>
+              <h4>Trips</h4>
+              <p>Recent ride history and weather summary, designed for future wiring.</p>
+              <div class="chip-grid">
+                <div class="chip"><strong>Last 3 rides</strong><span>312 km total · mostly dry conditions</span></div>
+                <div class="chip"><strong>Weather pattern</strong><span>Light wind · mild temperatures · low rain risk</span></div>
+              </div>
+            </section>
+
+            <section id="profile" class="tab-panel panel">
+              <div class="refresh-bar">
+                <button class="secondary tab-refresh" data-tab="profile">Refresh view</button>
+              </div>
+              <h4>Profile</h4>
+              <p>Read-only rider preferences in a compact, demo-friendly panel.</p>
+              <div class="profile-row"><strong>Preferred language</strong><span>English</span></div>
+              <div class="profile-row"><strong>Weather tolerance</strong><span>Moderate rain only, avoid gusty routes</span></div>
+              <div class="profile-row"><strong>Trip style</strong><span>Balanced scenic routes with efficient arrival times</span></div>
+            </section>
+          </aside>
+        </section>
+      </section>
+    </main>
 
     <script>
+      const landing = document.getElementById("landing");
+      const app = document.getElementById("app");
+      const getStartedBtn = document.getElementById("getStartedBtn");
       const chat = document.getElementById("chat");
       const promptInput = document.getElementById("prompt");
       const sendBtn = document.getElementById("sendBtn");
@@ -318,6 +994,8 @@
       const statusDot = document.getElementById("statusDot");
       const statusText = document.getElementById("statusText");
       const userIdInput = document.getElementById("userId");
+      const tabButtons = Array.from(document.querySelectorAll(".tab"));
+      const refreshButtons = Array.from(document.querySelectorAll(".tab-refresh"));
 
       const appName = "app";
       let sessionId = null;
@@ -327,22 +1005,68 @@
       const storedUserId = localStorage.getItem("ride-agent-user");
       userIdInput.value = storedUserId || "eval_user";
 
-      function setStatus(text, online) {
-        statusText.textContent = text;
-        statusDot.classList.toggle("online", Boolean(online));
+      function showApp() {
+        landing.classList.add("hidden");
+        app.classList.remove("hidden");
+        setTimeout(() => promptInput.focus(), 180);
+        history.replaceState({}, "", "#app");
       }
 
-      function addMessage(role, text) {
+      function setStatus(text, state) {
+        statusText.textContent = text;
+        statusDot.classList.remove("online", "streaming", "error");
+        if (state === "online") statusDot.classList.add("online");
+        if (state === "streaming") statusDot.classList.add("streaming");
+        if (state === "error") statusDot.classList.add("error");
+      }
+
+      function formatTime(date = new Date()) {
+        return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+
+      function addMessage(role, text, opts = {}) {
+        const last = chat.lastElementChild;
+        const canGroup = last && last.classList.contains("message") && last.classList.contains(role) && !opts.forceNew;
+        const isSkeleton = role === "assistant" && (text === null || text === "");
+        const timeLabel = formatTime();
+
+        if (canGroup && !isSkeleton) {
+          const textEl = document.createElement("div");
+          textEl.className = "text";
+          textEl.textContent = text;
+          const ts = document.createElement("div");
+          ts.className = "timestamp";
+          ts.textContent = timeLabel;
+          last.appendChild(textEl);
+          last.appendChild(ts);
+          chat.scrollTop = chat.scrollHeight;
+          return textEl;
+        }
+
         const wrapper = document.createElement("div");
         wrapper.className = `message ${role}`;
+
         const roleEl = document.createElement("div");
         roleEl.className = "role";
-        roleEl.textContent = role === "user" ? "You" : "Agent";
+        roleEl.textContent = role === "user" ? "You" : "Copilot";
+
         const textEl = document.createElement("div");
         textEl.className = "text";
-        textEl.textContent = text;
+        if (isSkeleton) {
+          const sk = document.createElement("div");
+          sk.className = "skeleton";
+          textEl.appendChild(sk);
+        } else {
+          textEl.textContent = text;
+        }
+
+        const ts = document.createElement("div");
+        ts.className = "timestamp";
+        ts.textContent = timeLabel;
+
         wrapper.appendChild(roleEl);
         wrapper.appendChild(textEl);
+        wrapper.appendChild(ts);
         chat.appendChild(wrapper);
         chat.scrollTop = chat.scrollHeight;
         return textEl;
@@ -363,7 +1087,7 @@
       async function createSession() {
         const userId = userIdInput.value.trim() || "eval_user";
         localStorage.setItem("ride-agent-user", userId);
-        setStatus("Starting session...", false);
+        setStatus("Starting session...", "idle");
         const response = await fetch(`/apps/${appName}/users/${encodeURIComponent(userId)}/sessions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -374,30 +1098,33 @@
         }
         const data = await response.json();
         sessionId = data.id;
-        setStatus(`Session ready (${sessionId.slice(0, 8)}...)`, true);
+        setStatus(`Session ready (${sessionId.slice(0, 8)}...)`, "online");
       }
 
       async function sendMessage() {
         if (isStreaming) {
           return;
         }
+
         const message = promptInput.value.trim();
         if (!message) {
           return;
         }
+
         if (!sessionId) {
           try {
             await createSession();
           } catch (error) {
-            setStatus("Failed to start session", false);
-            addMessage("assistant", `Session failed: ${error.message}`);
+            setStatus("Failed to start session", "error");
+            addMessage("assistant", `Session failed: ${error.message}`, { forceNew: true });
             return;
           }
         }
 
         promptInput.value = "";
-        addMessage("user", message);
-        const assistantTextEl = addMessage("assistant", "Thinking...");
+        addMessage("user", message, { forceNew: true });
+        const assistantTextEl = addMessage("assistant", "", { forceNew: true });
+        setStatus("Streaming...", "streaming");
         isStreaming = true;
         buffer = "";
 
@@ -435,11 +1162,11 @@
           }
 
           isStreaming = false;
-          setStatus("Listening", true);
+          setStatus("Ready", "online");
         } catch (error) {
           isStreaming = false;
           assistantTextEl.textContent = `Error: ${error.message}`;
-          setStatus("Error", false);
+          setStatus("Error", "error");
         }
       }
 
@@ -498,9 +1225,35 @@
         textEl.textContent = current + incoming;
       }
 
+      function setActiveTab(name) {
+        tabButtons.forEach((button) => button.classList.toggle("active", button.dataset.tab === name));
+        document.querySelectorAll(".tab-panel").forEach((panel) => {
+          panel.classList.toggle("active", panel.id === name);
+        });
+      }
+
+      function refreshPanel(tabName) {
+        const panel = document.getElementById(tabName);
+        if (!panel) {
+          return;
+        }
+        const heading = panel.querySelector("h4");
+        const statusLine = panel.querySelector("p");
+        const marker = panel.querySelector(".blank-state");
+        if (marker) {
+          marker.textContent = "Refreshed just now";
+        }
+        if (heading && statusLine) {
+          statusLine.textContent = `Frontend-only preview refreshed for ${heading.textContent.toLowerCase()}.`;
+        }
+      }
+
+      getStartedBtn.addEventListener("click", showApp);
+
       sendBtn.addEventListener("click", sendMessage);
       clearBtn.addEventListener("click", () => {
         chat.innerHTML = "";
+        setStatus("Ready", sessionId ? "online" : "idle");
       });
       newSessionBtn.addEventListener("click", async () => {
         sessionId = null;
@@ -514,8 +1267,19 @@
           sendMessage();
         }
       });
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+      });
+      refreshButtons.forEach((button) => {
+        button.addEventListener("click", () => refreshPanel(button.dataset.tab));
+      });
 
-      setStatus("Ready", false);
+      if (location.hash === "#app") {
+        showApp();
+      }
+
+      addMessage("assistant", "Welcome aboard. Start with a trip question, a service check, or a weather route ask when you're ready.", { forceNew: true });
+      setStatus("Ready", "idle");
     </script>
   </body>
 </html>
