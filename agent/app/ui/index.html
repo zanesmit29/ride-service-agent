@@ -503,6 +503,35 @@
         animation: shimmer 1.2s linear infinite;
       }
 
+      .thinking-line {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .thinking-dots {
+        display: inline-flex;
+        gap: 5px;
+      }
+
+      .thinking-dots span {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        animation: dotBounce 1s ease-in-out infinite;
+      }
+
+      .thinking-dots span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+
+      .thinking-dots span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+
       .composer {
         display: grid;
         gap: 12px;
@@ -682,6 +711,17 @@
         }
       }
 
+      @keyframes dotBounce {
+        0%, 80%, 100% {
+          transform: translateY(0);
+          opacity: 0.55;
+        }
+        40% {
+          transform: translateY(-3px);
+          opacity: 1;
+        }
+      }
+
       @keyframes cardIn {
         from {
           opacity: 0;
@@ -733,7 +773,10 @@
           font-size: clamp(2.5rem, 14vw, 4.2rem);
         }
 
-        .hero-notes,
+        .hero-notes {
+          gap: 10px;
+        }
+
         .stat-grid {
           grid-template-columns: 1fr;
         }
@@ -747,24 +790,6 @@
         .hero-actions,
         .landing-footer {
           gap: 10px;
-        }
-
-        .hero-actions button,
-        .landing-footer span {
-          width: 100%;
-          justify-content: center;
-          text-align: center;
-        }
-
-        .hero-visual {
-          min-height: 320px;
-          border-radius: 22px;
-        }
-
-        .hero-card {
-          left: 12px;
-          bottom: 12px;
-          width: calc(100% - 24px);
         }
 
         .topbar,
@@ -790,14 +815,28 @@
 
         .tabs {
           padding: 8px;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+
+        .tabs::-webkit-scrollbar {
+          display: none;
         }
 
         .tab {
-          flex: 1 1 calc(50% - 8px);
+          flex: 0 0 auto;
+          white-space: nowrap;
         }
 
         .workspace {
           grid-template-columns: 1fr;
+          padding: 12px;
+        }
+
+        .copilot-layout {
+          grid-template-rows: auto auto;
         }
 
         .chat {
@@ -1027,10 +1066,10 @@
       function addMessage(role, text, opts = {}) {
         const last = chat.lastElementChild;
         const canGroup = last && last.classList.contains("message") && last.classList.contains(role) && !opts.forceNew;
-        const isSkeleton = role === "assistant" && (text === null || text === "");
+        const isThinking = role === "assistant" && (text === null || text === "");
         const timeLabel = formatTime();
 
-        if (canGroup && !isSkeleton) {
+        if (canGroup && !isThinking) {
           const textEl = document.createElement("div");
           textEl.className = "text";
           textEl.textContent = text;
@@ -1052,10 +1091,18 @@
 
         const textEl = document.createElement("div");
         textEl.className = "text";
-        if (isSkeleton) {
-          const sk = document.createElement("div");
-          sk.className = "skeleton";
-          textEl.appendChild(sk);
+        if (isThinking) {
+          textEl.dataset.thinking = "true";
+          const thinkingLine = document.createElement("div");
+          thinkingLine.className = "thinking-line";
+          const label = document.createElement("span");
+          label.textContent = "Copilot is thinking";
+          const dots = document.createElement("span");
+          dots.className = "thinking-dots";
+          dots.innerHTML = "<span></span><span></span><span></span>";
+          thinkingLine.appendChild(label);
+          thinkingLine.appendChild(dots);
+          textEl.appendChild(thinkingLine);
         } else {
           textEl.textContent = text;
         }
@@ -1123,7 +1170,7 @@
 
         promptInput.value = "";
         addMessage("user", message, { forceNew: true });
-        const assistantTextEl = addMessage("assistant", "", { forceNew: true });
+  const assistantTextEl = addMessage("assistant", "", { forceNew: true });
         setStatus("Streaming...", "streaming");
         isStreaming = true;
         buffer = "";
@@ -1148,7 +1195,6 @@
             throw new Error(`Request error: ${response.status}`);
           }
 
-          assistantTextEl.textContent = "";
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
 
@@ -1206,6 +1252,10 @@
       function applyStreamUpdate(textEl, incoming) {
         if (!incoming) {
           return;
+        }
+        if (textEl.dataset && textEl.dataset.thinking === "true") {
+          textEl.dataset.thinking = "false";
+          textEl.textContent = "";
         }
         const current = textEl.textContent || "";
         if (!current) {
