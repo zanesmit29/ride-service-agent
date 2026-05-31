@@ -33,20 +33,49 @@ Next steps (recommended order):
 	- [x] Add a compact preferences panel (read-only) pulled from `get_rider_profile`.
 	- [x] Add per-tab loading + empty states and a refresh action.
 
-	Current handoff point:
-	- The landing page is now a single-column overview with tab tips.
-	- The app shell and chat flow are in place.
-	- The ride logger and trip-planning date handling are now wired and validated.
-	- Next pick-up point is adding analytics/aggregation to better showcase the MongoDB MCP capabilities.
 
-3. Add a MongoDB aggregation showcase.
-	Approach: use aggregate pipelines to turn ride history into clear, demo-friendly insights that prove the MCP toolset is useful beyond simple lookups.
-	Execution:
-	- [ ] Add a ride-history summary output (total distance, ride count, average distance, average speed if available).
-	- [ ] Add a route-type breakdown using `ride_logs` aggregation.
-	- [ ] Add a weather/season breakdown from historical rides to show pattern discovery.
-	- [ ] Surface one or two aggregation-backed insights in the UI so the demo visibly exercises `aggregate`.
-	- [ ] Keep the aggregation logic read-only and separate from ride logging/reminder writes.
+3. Add a MongoDB aggregation showcase (MCP‑First Dashboard).
+	Goal: implement a read-first dashboard that showcases MCP aggregation power while keeping all writes under existing Python helper tools and agent confirmation rules.
+
+	High-level approach:
+	- Prefer McpToolset `aggregate` and `find` for KPI calculations; use Python fallbacks only when MCP is impractical.
+	- Surface a compact `dashboard` object from the existing `/tab-data` endpoint (`/tab-data.dashboard`).
+	- Keep dashboard endpoints strictly read-only; do not add new write tools for dashboard features.
+
+	Key KPIs (initial):
+	- `total_rides` (count)
+	- `total_distance_km` (sum of `distance_km`)
+	- `avg_distance_km` (average distance)
+	- `avg_speed_kmh` (when available)
+	- `top_route_type` (most frequent `route_type`)
+	- `rides_by_weather` (counts by weather category)
+	- `recent_activity` (rides/week sparkline for last N weeks)
+
+	Implementation (Phase A – priority):
+	1) Backend (MCP-first):
+	   - Add concise MCP `aggregate` pipelines for `total_rides` and `total_distance_km` against `ride_logs`.
+	   - Extend `get_tab_data` to include a compact `dashboard` object with the MCP results. Return JSON-friendly payloads (stringify IDs, no ObjectId).
+	   - Feature-flag a Python fallback for CI/dev environments without MCP.
+
+	2) UI: dashboard shell and cards
+	   - Add a right-side dashboard panel (side-column) in `agent/app/ui/index.html` for KPI cards and a small sparkline.
+	   - Show graceful empty states; allow clicking a KPI to view a minimal details flyout (pipeline summary + sample records).
+
+	3) Tests & demo readiness
+	   - Add an integration test asserting `/tab-data` includes `dashboard` with `total_rides` and `total_distance_km` keys.
+	   - Provide a tiny seeded dataset (dev-only) so demos are immediate.
+
+	UX & governance constraints:
+	- Keep all writes under Python helper tools and require explicit user confirmation for any write.
+	- Ensure tool responses are JSON-safe (no raw `ObjectId`, return dict copies and string IDs) to avoid ADK serialization issues.
+	- Document how to start the MCP server locally and how to switch to Python fallback in `README.md`.
+
+	Rollout plan:
+	- Phase A (this sprint): implement Phase A items above (dashboard shell + two MCP aggregates + test).
+	- Phase B: add remaining KPIs, sparkline, seeded data, and demo script.
+	- Phase C (optional): add KPI details flyout and export for demos.
+
+	Notes / next action: I can implement Phase A now (add dashboard shell, MCP pipelines for `total_rides` and `total_distance_km`, and a small integration test). Proceed?
 
 4. Add a garage operations agent.
 	Approach: synthesize service history, reminders, stock, and planned trips into a maintenance calendar.
