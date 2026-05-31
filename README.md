@@ -2,10 +2,10 @@
 
 A personal motorcycle reliability agent built with Gemini and the Google ADK.
 
-Status: Work in progress — the FastAPI integration is not fully wired yet. The primary development focus is the agent implementation contained in `agent/app/agent.py`, `agent/app/tools.py`, and `agent/app/prompts.py`.
+Status: Work in progress — the FastAPI integration is secondary, while the agent layer now includes ride logging, trip planning, diagnostics, and maintenance tooling in `agent/app/agent.py`, `agent/app/tools.py`, and `agent/app/prompts.py`.
 
 ## Overview
-This repository contains the core agent logic for a motorcycle assistant. The agents coordinate to provide maintenance advice, trip-readiness checks, reminders, and symptom-based diagnostics using a MongoDB-backed data model. The FastAPI app exists but is currently secondary and may not be fully operational in this branch.
+This repository contains the core agent logic for a motorcycle assistant. The agents coordinate to provide maintenance advice, trip-readiness checks, reminders, ride logging, trip planning, and symptom-based diagnostics using a MongoDB-backed data model. The FastAPI app exists but is currently secondary and may not be the main focus in this branch.
 
 ## Key files (focus)
 
@@ -13,6 +13,8 @@ This repository contains the core agent logic for a motorcycle assistant. The ag
 	- Defines three main Agent instances:
 		- `service_agent`: handles scheduled maintenance, trip-readiness, reminders, and parts availability. Uses a `McpToolset` to query MongoDB and an `insert_reminder` tool for logging reminders.
 		- `diagnostics_agent`: diagnoses issues from user-described symptoms by querying `motorbike_issues`.
+		- `trip_planning_agent`: recommends a riding direction or destination region based on trip dates, rider preferences, and weather forecast data.
+		- `ride_logging_agent`: collects ride details, optional metadata, and logs completed rides to `ride_logs`.
 		- `root_agent`: coordinates routing between the specialist agents and answers simple greetings directly.
 	- Agents use Gemini models (configured as `gemini-2.5-pro` in the code) and are configured with instruction text and toolsets.
 	- The MCP tool integration launches a local MCP server via `npx mongodb-mcp-server` (configured in `StdioServerParameters`) and filters allowed DB operations.
@@ -21,9 +23,15 @@ This repository contains the core agent logic for a motorcycle assistant. The ag
 	- `insert_reminder(service_type: str, due_km: int, due_date: str) -> dict`:
 		- Connects to MongoDB using `MDB_MCP_CONNECTION_STRING` and inserts a document into `ride_agent_db.service_reminders`.
 		- Intended to be called only after user confirmation; returns a confirmation dict with `inserted_id`.
+	- `insert_ride_log(date: str | None = None, odometer_end_km: int | None = None, distance_km: int | None = None, route_type: str | None = None, avg_speed_kmh: int | None = None, fuel_used_liters: float | None = None, weather: str | None = None, notes: str | None = None) -> dict`:
+		- Logs completed rides into `ride_agent_db.ride_logs`.
+		- Accepts natural-language dates such as `today`, `tomorrow`, and explicit ranges; the helper normalizes dates internally.
+		- Missing optional fields are stored as null so the schema stays consistent.
 	- `get_rider_profile(user_id: str) -> dict`:
 		- Reads a rider profile from `ride_agent_db.rider_profiles` and returns the profile (or `{"status": "not_found"}`).
 		- Used by the agents to personalise advice and route preference updates.
+	- `parse_natural_date_range(text: str) -> dict`:
+		- Normalizes natural-language date text for trip planning and returns `status`, `start_date`, and `end_date`.
 	- `update_rider_preferences(user_id: str, ...) -> dict`:
 		- Updates a defined set of rider preference fields (route, weather, trip style, comfort, maintenance reminders) without allowing arbitrary schema keys.
 		- Only provided kwargs are written; returns a summary of updated fields and upsert information.
@@ -101,15 +109,27 @@ resp = update_rider_preferences(
 		reminder_lead_days=7,
 )
 print(resp)
+
+# Parse trip dates for planning
+from app.tools import parse_natural_date_range
+print(parse_natural_date_range("5 Jun 2026 to 7 Jun 2026"))
+
+# Log a ride with natural-language date handling
+from app.tools import insert_ride_log
+print(insert_ride_log(date="today", distance_km=120, odometer_end_km=44000, notes="demo ride"))
 ```
 
-- **Agent composition:** `agent/app/agent.py` exposes three Agent instances:
+- **Agent composition:** `agent/app/agent.py` exposes four Agent instances:
 	- `service_agent` — attached tools: Mongo MCP toolset + `insert_reminder` (can log reminders into `service_reminders`).
 	- `diagnostics_agent` — attached tools: Mongo MCP toolset (for issue lookups and schema discovery).
+	- `trip_planning_agent` — attached tools: Mongo MCP toolset + `get_rider_profile` + `parse_natural_date_range` + `get_weather_forecast`.
+	- `ride_logging_agent` — attached tools: `insert_ride_log` for logging completed rides.
 	- `root_agent` — attached tools: `get_rider_profile`, `update_rider_preferences`; routes requests to the two specialist agents.
 
 ## Notes
 - `insert_reminder` in `tools.py` performs a direct `pymongo` insert into `ride_agent_db.service_reminders` and closes the client — ensure your connection string and DB permissions are correct.
+- `insert_ride_log` normalizes natural-language dates in Python before writing to `ride_agent_db.ride_logs`, and keeps optional metadata fields null when they are not provided.
+- `parse_natural_date_range` is the shared trip-planning date helper; it keeps the chat natural while still normalizing dates before weather lookups.
 - `prompts.py` contains the authoritative domain rules and expected collection schemas; if you modify the DB layout, update these rules accordingly.
 - FastAPI (`agent/app/fast_api_app.py`) is present but not the immediate focus — current work is on agent behavior and tooling.
 
