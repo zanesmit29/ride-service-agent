@@ -69,14 +69,8 @@ def parse_natural_date(text: str, *, today: datetime_date | None = None) -> date
     return None
 
 
-def parse_natural_date_range(text: str, *, today: datetime_date | None = None) -> tuple[str | None, str | None]:
-    """Parse a natural-language date or date range into ISO date strings.
-
-    Examples:
-    - "today" -> (YYYY-MM-DD, YYYY-MM-DD)
-    - "next weekend" -> (Saturday ISO, Sunday ISO)
-    - "5 Jun 2026 to 7 Jun 2026" -> (start ISO, end ISO)
-    """
+def _parse_natural_date_range(text: str, *, today: datetime_date | None = None) -> tuple[str | None, str | None]:
+    """Internal parser that returns a (start_date, end_date) tuple."""
     today = today or datetime_date.today()
     cleaned_text = text.strip()
     lowered_text = cleaned_text.lower()
@@ -105,6 +99,27 @@ def parse_natural_date_range(text: str, *, today: datetime_date | None = None) -
         return iso_date, iso_date
 
     return None, None
+
+
+def parse_natural_date_range(text: str) -> dict:
+        """Parse natural-language date text into tool-friendly structured output.
+
+        Returns:
+            {
+                "status": "parsed" | "unparsed",
+                "start_date": "YYYY-MM-DD" | None,
+                "end_date": "YYYY-MM-DD" | None,
+            }
+        """
+        start_date, end_date = _parse_natural_date_range(
+                text,
+                today=datetime.now(timezone.utc).date(),
+        )
+        return {
+                "status": "parsed" if (start_date and end_date) else "unparsed",
+                "start_date": start_date,
+                "end_date": end_date,
+        }
 
 
 def insert_reminder(service_type: str, due_km: int, due_date: str) -> dict:
@@ -154,7 +169,10 @@ def insert_ride_log(
     # Normalize/validate inputs where possible, but allow missing fields.
     # Date: normalize natural language to an ISO date, defaulting to today if missing.
     if date:
-        parsed_date, parsed_end_date = parse_natural_date_range(date, today=datetime.now(timezone.utc).date())
+        parsed_date, parsed_end_date = _parse_natural_date_range(
+            date,
+            today=datetime.now(timezone.utc).date(),
+        )
         if parsed_end_date and parsed_end_date != parsed_date:
             return {
                 "status": "error",

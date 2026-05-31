@@ -20,7 +20,7 @@ from google.adk.agents import Agent
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
-from .tools import insert_reminder, get_rider_profile, update_rider_preferences, get_weather_forecast, insert_ride_log
+from .tools import insert_reminder, get_rider_profile, update_rider_preferences, get_weather_forecast, insert_ride_log, parse_natural_date_range
 from .prompts import (
     ROOT_AGENT_INSTRUCTIONS,
     SERVICE_AGENT_INSTRUCTIONS,
@@ -95,6 +95,7 @@ trip_planning_agent = Agent(
     tools=[
         build_mongo_toolset(["find"]),
         get_rider_profile,
+        parse_natural_date_range,
         get_weather_forecast,
     ],
     output_key="trip_planning_advice",
