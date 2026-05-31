@@ -186,3 +186,17 @@ def test_collect_feedback(server_fixture: subprocess.Popen[str]) -> None:
         FEEDBACK_URL, json=feedback_data, headers=HEADERS, timeout=10
     )
     assert response.status_code == 200
+
+
+def test_tab_data_contract(server_fixture: subprocess.Popen[str]) -> None:
+    """Test the tab-data contract endpoint returns the expected top-level shape."""
+
+    response = requests.get(f"{BASE_URL}/tab-data", params={"user_id": "test_user_123"}, timeout=10)
+    assert response.status_code == 200
+
+    payload = response.json()
+    assert set(payload.keys()) == {"vehicle", "reminders", "trips", "profile"}
+    assert payload["vehicle"]["state"] in {"loading", "ready", "empty", "error"}
+    assert payload["reminders"]["state"] in {"loading", "ready", "empty", "error"}
+    assert payload["trips"]["state"] in {"loading", "ready", "empty", "error"}
+    assert payload["profile"]["state"] in {"loading", "ready", "empty", "error"}

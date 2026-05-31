@@ -579,6 +579,49 @@
         animation: panelLift 420ms ease;
       }
 
+      .panel.panel-loading {
+        opacity: 0.88;
+      }
+
+      .panel.panel-loading .refresh-bar button {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+
+      .panel-status {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .panel.panel-loading .panel-status {
+        display: inline-flex;
+      }
+
+      .panel-status .dots {
+        display: inline-flex;
+        gap: 4px;
+      }
+
+      .panel-status .dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        animation: dotBounce 1s ease-in-out infinite;
+      }
+
+      .panel-status .dots span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+
+      .panel-status .dots span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+
       .panel h3 {
         margin: 0 0 12px;
         font-size: 0.92rem;
@@ -606,6 +649,24 @@
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.05);
         padding: 14px;
+      }
+
+      /* Spacing for profile preference rows and advanced section */
+      .profile-row {
+        margin-bottom: 8px;
+      }
+
+      .advanced-preferences {
+        margin-top: 10px;
+      }
+
+      .advanced-toggle {
+        display: block;
+        margin: 8px 0;
+      }
+
+      .advanced-list .profile-row {
+        margin-top: 8px;
       }
 
       .stat strong,
@@ -741,6 +802,17 @@
         to {
           opacity: 1;
           transform: translateY(0);
+        }
+      }
+
+      @keyframes dotBounce {
+        0%, 80%, 100% {
+          transform: translateY(0);
+          opacity: 0.55;
+        }
+        40% {
+          transform: translateY(-3px);
+          opacity: 1;
         }
       }
 
@@ -975,10 +1047,10 @@
                 <button class="secondary tab-refresh" data-tab="vehicle">Refresh view</button>
               </div>
               <h4>Vehicle status</h4>
-              <p>Latest ride context rendered as a sporty dashboard panel.</p>
+              <p id="vehicleSummary">Latest ride context rendered as a sporty dashboard panel.</p>
               <div class="stat-grid">
-                <div class="stat"><strong>Odometer</strong><span>18,240 km · last ride updated 2 days ago</span></div>
-                <div class="stat"><strong>Service</strong><span>Next check in 480 km · brake inspection highlighted</span></div>
+                <div class="stat"><strong>Odometer</strong><span id="vehicleOdometer">Loading vehicle data...</span></div>
+                <div class="stat"><strong>Service</strong><span id="vehicleService">Loading vehicle data...</span></div>
               </div>
             </section>
 
@@ -987,10 +1059,9 @@
                 <button class="secondary tab-refresh" data-tab="reminders">Refresh view</button>
               </div>
               <h4>Reminders</h4>
-              <p>Open service reminders, staged as a clean frontend placeholder.</p>
-              <div class="list-grid">
-                <div class="list-item"><strong>Chain lube</strong><span>Due soon · status open</span></div>
-                <div class="list-item"><strong>Tire pressure</strong><span>Check before next ride · status open</span></div>
+              <p id="remindersSummary">Open service reminders, staged as a clean frontend placeholder.</p>
+              <div class="list-grid" id="remindersList">
+                <div class="list-item"><strong>Chain lube</strong><span>Loading reminders...</span></div>
               </div>
             </section>
 
@@ -999,10 +1070,10 @@
                 <button class="secondary tab-refresh" data-tab="trips">Refresh view</button>
               </div>
               <h4>Trips</h4>
-              <p>Recent ride history and weather summary, designed for future wiring.</p>
+              <p id="tripsSummary">Recent ride history and weather summary, designed for future wiring.</p>
               <div class="chip-grid">
-                <div class="chip"><strong>Last 3 rides</strong><span>312 km total · mostly dry conditions</span></div>
-                <div class="chip"><strong>Weather pattern</strong><span>Light wind · mild temperatures · low rain risk</span></div>
+                <div class="chip"><strong>Ride totals</strong><span id="tripsTotals">Loading trip totals...</span></div>
+                <div class="chip"><strong>Weather pattern</strong><span id="tripsWeather">Loading trip weather...</span></div>
               </div>
             </section>
 
@@ -1011,10 +1082,12 @@
                 <button class="secondary tab-refresh" data-tab="profile">Refresh view</button>
               </div>
               <h4>Profile</h4>
-              <p>Read-only rider preferences in a compact, demo-friendly panel.</p>
-              <div class="profile-row"><strong>Preferred language</strong><span>English</span></div>
-              <div class="profile-row"><strong>Weather tolerance</strong><span>Moderate rain only, avoid gusty routes</span></div>
-              <div class="profile-row"><strong>Trip style</strong><span>Balanced scenic routes with efficient arrival times</span></div>
+              <p id="profileSummary">Read-only rider preferences in a compact, demo-friendly panel.</p>
+              <div id="profileRows">
+                <div class="profile-row"><strong>Preferred language</strong><span>English</span></div>
+                <div class="profile-row"><strong>Weather tolerance</strong><span>Moderate rain only, avoid gusty routes</span></div>
+                <div class="profile-row"><strong>Trip style</strong><span>Balanced scenic routes with efficient arrival times</span></div>
+              </div>
             </section>
           </aside>
         </section>
@@ -1035,11 +1108,290 @@
       const userIdInput = document.getElementById("userId");
       const tabButtons = Array.from(document.querySelectorAll(".tab"));
       const refreshButtons = Array.from(document.querySelectorAll(".tab-refresh"));
+      const vehicleSummary = document.getElementById("vehicleSummary");
+      const vehicleOdometer = document.getElementById("vehicleOdometer");
+      const vehicleService = document.getElementById("vehicleService");
+      const remindersSummary = document.getElementById("remindersSummary");
+      const remindersList = document.getElementById("remindersList");
+      const tripsSummary = document.getElementById("tripsSummary");
+      const tripsTotals = document.getElementById("tripsTotals");
+      const tripsWeather = document.getElementById("tripsWeather");
+      const profileSummary = document.getElementById("profileSummary");
+      const profileRows = document.getElementById("profileRows");
 
       const appName = "app";
       let sessionId = null;
       let isStreaming = false;
       let buffer = "";
+      const refreshTimers = new Map();
+      let vehicleDataLoaded = false;
+
+      function formatDate(value) {
+        if (!value) {
+          return "unknown date";
+        }
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+          return String(value);
+        }
+        return parsed.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+      }
+
+      function renderVehicleData(vehicle) {
+        if (!vehicleSummary || !vehicleOdometer || !vehicleService) {
+          return;
+        }
+
+        const summary = vehicle.message || "Live vehicle data loaded from the backend contract.";
+        const odometerValue = vehicle.latest_odometer_end_km;
+        const rideDate = vehicle.last_ride_date ? formatDate(vehicle.last_ride_date) : "unknown date";
+
+        vehicleSummary.textContent = summary;
+        vehicleOdometer.textContent = odometerValue !== null && odometerValue !== undefined
+          ? `${odometerValue} km · last ride ${rideDate}`
+          : "No ride history found yet.";
+        vehicleService.textContent = vehicle.next_service_highlight || "No service highlight available yet.";
+        vehicleDataLoaded = true;
+      }
+
+      function renderVehicleError(message) {
+        if (!vehicleSummary || !vehicleOdometer || !vehicleService) {
+          return;
+        }
+
+        vehicleSummary.textContent = `Vehicle data unavailable: ${message}`;
+        vehicleOdometer.textContent = "Unable to load odometer data.";
+        vehicleService.textContent = "Unable to load service data.";
+      }
+
+      function renderRemindersData(reminders) {
+        if (!remindersSummary || !remindersList) {
+          return;
+        }
+
+        const openReminders = Array.isArray(reminders.open_reminders) ? reminders.open_reminders : [];
+        remindersSummary.textContent = reminders.message || "Open service reminders loaded from the backend contract.";
+        remindersList.innerHTML = "";
+
+        if (!openReminders.length) {
+          const emptyItem = document.createElement("div");
+          emptyItem.className = "list-item";
+          emptyItem.innerHTML = "<strong>No open reminders</strong><span>Nothing is currently due.</span>";
+          remindersList.appendChild(emptyItem);
+          return;
+        }
+
+        openReminders.forEach((reminder) => {
+          const item = document.createElement("div");
+          item.className = "list-item";
+
+          const title = document.createElement("strong");
+          title.textContent = reminder.service_type || "Service reminder";
+
+          const details = document.createElement("span");
+          const parts = [];
+          if (reminder.due_km !== null && reminder.due_km !== undefined) {
+            parts.push(`Due at ${reminder.due_km} km`);
+          }
+          if (reminder.due_date) {
+            parts.push(`by ${formatDate(reminder.due_date)}`);
+          }
+          if (reminder.status) {
+            parts.push(`status ${reminder.status}`);
+          }
+          details.textContent = parts.join(" · ") || "Open reminder";
+
+          item.appendChild(title);
+          item.appendChild(details);
+          remindersList.appendChild(item);
+        });
+      }
+
+      function renderTripsData(trips) {
+        if (!tripsSummary || !tripsTotals || !tripsWeather) {
+          return;
+        }
+
+        const recentRides = Array.isArray(trips.recent_rides) ? trips.recent_rides : [];
+        const totals = trips.totals || {};
+        const rideCount = totals.ride_count ?? recentRides.length;
+        const distanceKm = totals.distance_km ?? 0;
+        const fuelLiters = totals.fuel_liters ?? 0;
+
+        tripsSummary.textContent = trips.message || "Recent rides and weather context loaded from the backend contract.";
+        tripsTotals.textContent = `${rideCount} rides · ${distanceKm} km total · ${fuelLiters} L fuel`;
+        tripsWeather.textContent = trips.weather_summary || "No recent weather summary available yet.";
+      }
+
+      function formatPreferenceValue(value) {
+        if (value === null || value === undefined || value === "") {
+          return "Not set";
+        }
+        if (typeof value === "boolean") {
+          return value ? "Yes" : "No";
+        }
+        if (typeof value === "number") {
+          return String(value);
+        }
+        if (Array.isArray(value)) {
+          return value.length ? value.join(", ") : "Not set";
+        }
+        return String(value);
+      }
+
+      function renderProfileData(profilePayload) {
+        if (!profileSummary || !profileRows) {
+          return;
+        }
+
+        const profile = profilePayload.profile || {};
+        const preferences = profile.preferences || {};
+        const route = preferences.route || {};
+        const weather = preferences.weather || {};
+        const tripStyle = preferences.trip_style || {};
+        const comfortLimits = preferences.comfort_limits || {};
+        const maintenance = preferences.maintenance || {};
+
+        profileSummary.textContent = profilePayload.message || "Read-only rider preferences loaded from the backend contract.";
+        profileRows.innerHTML = "";
+
+        // Primary, hand-picked rows (keep existing behavior exactly)
+        const rowData = [
+          ["Preferred language", profile.language || profile.preferred_language],
+          ["Avoid city", route.avoid_city],
+          ["Avoid highways", route.avoid_highways],
+          ["Weather", weather.avoid_heavy_rain || weather.avoid_strong_wind ? [weather.avoid_heavy_rain ? "Avoid heavy rain" : null, weather.avoid_strong_wind ? "Avoid strong wind" : null].filter(Boolean) : null],
+          ["Trip style", tripStyle.prefer_scenic_over_fastest ? "Prefer scenic routes" : tripStyle.likes_frequent_stops ? "Likes frequent stops" : null],
+          ["Comfort limits", comfortLimits.max_km_per_day || comfortLimits.preferred_break_interval_km || comfortLimits.comfortable_days_consecutive ? `Max ${formatPreferenceValue(comfortLimits.max_km_per_day)} km/day · break every ${formatPreferenceValue(comfortLimits.preferred_break_interval_km)} km` : null],
+          ["Maintenance reminders", maintenance.wants_early_reminders ? `Lead ${formatPreferenceValue(maintenance.reminder_lead_km)} km / ${formatPreferenceValue(maintenance.reminder_lead_days)} days` : null],
+        ];
+
+        const visibleRows = rowData.filter(([, value]) => value !== null && value !== undefined && value !== "");
+        if (!visibleRows.length) {
+          const emptyRow = document.createElement("div");
+          emptyRow.className = "profile-row";
+          emptyRow.innerHTML = "<strong>No saved preferences</strong><span>This rider profile is empty.</span>";
+          profileRows.appendChild(emptyRow);
+        } else {
+          visibleRows.forEach(([label, value]) => {
+            const row = document.createElement("div");
+            row.className = "profile-row";
+
+            const title = document.createElement("strong");
+            title.textContent = label;
+
+            const content = document.createElement("span");
+            content.textContent = formatPreferenceValue(value);
+
+            row.appendChild(title);
+            row.appendChild(content);
+            profileRows.appendChild(row);
+          });
+        }
+
+        // --- Advanced preferences: flatten remaining keys under profile.preferences ---
+        // Helper: recursively flatten an object into [path, value] pairs
+        function flatten(obj, prefix = []) {
+          const out = [];
+          if (obj === null || obj === undefined) return out;
+          if (typeof obj !== "object" || Array.isArray(obj)) {
+            out.push([prefix.join("."), obj]);
+            return out;
+          }
+          for (const [k, v] of Object.entries(obj)) {
+            const next = prefix.concat(k);
+            if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+              out.push(...flatten(v, next));
+            } else {
+              out.push([next.join("."), v]);
+            }
+          }
+          return out;
+        }
+
+        // Compute the exact preference paths already shown in the primary rows
+        const displayedPaths = new Set([
+          "route.avoid_city",
+          "route.avoid_highways",
+          "weather.avoid_heavy_rain",
+          "weather.avoid_strong_wind",
+          "trip_style.prefer_scenic_over_fastest",
+          "trip_style.likes_frequent_stops",
+          "comfort_limits.max_km_per_day",
+          "comfort_limits.preferred_break_interval_km",
+          "comfort_limits.comfortable_days_consecutive",
+          "maintenance.wants_early_reminders",
+          "maintenance.reminder_lead_km",
+          "maintenance.reminder_lead_days",
+        ]);
+
+        const allPrefRows = flatten(preferences);
+        // Keep anything that isn't exactly one of the displayed paths (do not exclude entire groups)
+        const advancedRows = allPrefRows.filter(([path]) => path && !displayedPaths.has(path));
+
+        if (advancedRows.length) {
+          const advContainer = document.createElement("div");
+          advContainer.className = "advanced-preferences";
+
+          const toggle = document.createElement("button");
+          toggle.type = "button";
+          toggle.className = "advanced-toggle";
+          toggle.textContent = "Show advanced preferences";
+
+          const list = document.createElement("div");
+          list.className = "advanced-list";
+          list.style.display = "none"; // collapsed by default
+
+          // Humanize dotted key into readable label. Format: "TopLevel: Sub › Key"
+          function humanizeKey(path) {
+            if (!path) return "";
+            const parts = path.split('.');
+            const humanize = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const humanized = parts.map(humanize);
+            if (humanized.length === 1) return humanized[0];
+            return `${humanized[0]}: ${humanized.slice(1).join(' › ')}`;
+          }
+
+          advancedRows.forEach(([path, value]) => {
+            const row = document.createElement("div");
+            row.className = "profile-row advanced-row";
+
+            const title = document.createElement("strong");
+            title.textContent = humanizeKey(path || "");
+
+            const content = document.createElement("span");
+            content.textContent = formatPreferenceValue(value);
+
+            row.appendChild(title);
+            row.appendChild(content);
+            list.appendChild(row);
+          });
+
+          toggle.addEventListener("click", () => {
+            const open = list.style.display !== "none";
+            list.style.display = open ? "none" : "block";
+            toggle.textContent = open ? "Show advanced preferences" : "Hide advanced preferences";
+          });
+
+          advContainer.appendChild(toggle);
+          advContainer.appendChild(list);
+          profileRows.appendChild(advContainer);
+        }
+      }
+
+      async function loadTabData() {
+        const userId = userIdInput.value.trim() || "eval_user";
+        const response = await fetch(`/tab-data?user_id=${encodeURIComponent(userId)}`);
+        if (!response.ok) {
+          throw new Error(`Tab data error: ${response.status}`);
+        }
+        const data = await response.json();
+        renderVehicleData(data.vehicle || {});
+        renderRemindersData(data.reminders || {});
+        renderTripsData(data.trips || {});
+        renderProfileData(data.profile || {});
+        return data;
+      }
 
       const storedUserId = localStorage.getItem("ride-agent-user");
       userIdInput.value = storedUserId || "eval_user";
@@ -1049,6 +1401,9 @@
         app.classList.remove("hidden");
         setTimeout(() => promptInput.focus(), 180);
         history.replaceState({}, "", "#app");
+        if (!vehicleDataLoaded) {
+          void refreshPanel("vehicle");
+        }
       }
 
       function setStatus(text, state) {
@@ -1282,20 +1637,73 @@
         });
       }
 
-      function refreshPanel(tabName) {
+      async function refreshPanel(tabName) {
         const panel = document.getElementById(tabName);
         if (!panel) {
           return;
         }
+
+        const refreshButton = panel.querySelector(".tab-refresh");
         const heading = panel.querySelector("h4");
         const statusLine = panel.querySelector("p");
         const marker = panel.querySelector(".blank-state");
+
+        if (refreshTimers.has(tabName)) {
+          window.clearTimeout(refreshTimers.get(tabName));
+        }
+
+        const baseStatus = statusLine ? (statusLine.dataset.baseText || statusLine.textContent) : "";
+        if (statusLine && !statusLine.dataset.baseText) {
+          statusLine.dataset.baseText = baseStatus;
+        }
+
+        panel.classList.add("panel-loading");
+        panel.setAttribute("aria-busy", "true");
+        if (refreshButton) {
+          refreshButton.disabled = true;
+        }
+
         if (marker) {
           marker.textContent = "Refreshed just now";
         }
         if (heading && statusLine) {
-          statusLine.textContent = `Frontend-only preview refreshed for ${heading.textContent.toLowerCase()}.`;
+          statusLine.textContent = `Refreshing ${heading.textContent.toLowerCase()}...`;
         }
+
+        if (tabName === "vehicle" || tabName === "reminders" || tabName === "trips" || tabName === "profile") {
+          try {
+            await loadTabData();
+          } catch (error) {
+            renderVehicleError(error.message);
+            if (remindersSummary && remindersList) {
+              remindersSummary.textContent = `Reminders unavailable: ${error.message}`;
+              remindersList.innerHTML = "<div class=\"list-item\"><strong>Unable to load reminders</strong><span>Try refreshing again.</span></div>";
+            }
+            if (tripsSummary && tripsTotals && tripsWeather) {
+              tripsSummary.textContent = `Trips unavailable: ${error.message}`;
+              tripsTotals.textContent = "Unable to load trip totals.";
+              tripsWeather.textContent = "Unable to load trip weather.";
+            }
+            if (profileSummary && profileRows) {
+              profileSummary.textContent = `Profile unavailable: ${error.message}`;
+              profileRows.innerHTML = "<div class=\"profile-row\"><strong>Unable to load profile</strong><span>Try refreshing again.</span></div>";
+            }
+          }
+        }
+
+        const timerId = window.setTimeout(() => {
+          panel.classList.remove("panel-loading");
+          panel.setAttribute("aria-busy", "false");
+          if (refreshButton) {
+            refreshButton.disabled = false;
+          }
+          if (statusLine) {
+            statusLine.textContent = statusLine.dataset.baseText || baseStatus;
+          }
+          refreshTimers.delete(tabName);
+        }, 700);
+
+        refreshTimers.set(tabName, timerId);
       }
 
       getStartedBtn.addEventListener("click", showApp);
@@ -1311,6 +1719,25 @@
       });
       userIdInput.addEventListener("change", () => {
         sessionId = null;
+        vehicleDataLoaded = false;
+        if (vehicleSummary && vehicleOdometer && vehicleService) {
+          vehicleSummary.textContent = "Latest ride context rendered as a sporty dashboard panel.";
+          vehicleOdometer.textContent = "Loading vehicle data...";
+          vehicleService.textContent = "Loading vehicle data...";
+        }
+        if (remindersSummary && remindersList) {
+          remindersSummary.textContent = "Open service reminders, staged as a clean frontend placeholder.";
+          remindersList.innerHTML = "<div class=\"list-item\"><strong>Loading reminders...</strong><span>Please wait.</span></div>";
+        }
+        if (tripsSummary && tripsTotals && tripsWeather) {
+          tripsSummary.textContent = "Recent ride history and weather summary, designed for future wiring.";
+          tripsTotals.textContent = "Loading trip totals...";
+          tripsWeather.textContent = "Loading trip weather...";
+        }
+        if (profileSummary && profileRows) {
+          profileSummary.textContent = "Read-only rider preferences in a compact, demo-friendly panel.";
+          profileRows.innerHTML = "<div class=\"profile-row\"><strong>Loading profile...</strong><span>Please wait.</span></div>";
+        }
       });
       promptInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && event.ctrlKey) {

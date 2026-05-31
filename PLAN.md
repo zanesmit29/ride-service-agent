@@ -14,17 +14,25 @@ Next steps (recommended order):
 2. Significantly improve the UI so it feels like a production-grade motorcycle co-pilot application.
 	Approach: elevate layout, typography, and interaction flow; add clarity for session state and streaming.
 	Execution:
-	- [ ] Add a “session status” banner (connected, streaming, error).
-	- [ ] Add message grouping, timestamps, and a clear “new session” affordance.
-	- [ ] Add mobile-first layout tweaks and a loading skeleton for streams.
-	- [ ] Build the tabbed layout: Copilot, Vehicle status, Reminders, Trips, Profile.
+	- [x] Add a “session status” banner (connected, streaming, error).
+	- [x] Add message grouping, timestamps, and a clear “new session” affordance.
+	- [x] Add mobile-first layout tweaks and a loading skeleton for streams.
+	- [x] Build the tabbed layout: Copilot, Vehicle status, Reminders, Trips, Profile.
+	- [x] Keep a single user selector at the top to reuse across tabs.
+	- [x] Remove the right-side landing panel so the landing content reads cleanly on its own.
+	- [x] Rewrite the landing page tips so each tab is explained before the user enters the app.
+	- [x] Add a lightweight assistant thinking indicator so streamed answers feel live.
 	- [ ] Vehicle status data: `ride_logs` latest `odometer_end_km`, last ride date, next service highlight.
 	- [ ] Reminders data: open items from `service_reminders` (due km/date + status).
 	- [ ] Trips data: recent `ride_logs` (last N, totals, weather summary).
 	- [ ] Profile data: read-only preferences from `rider_profiles` for `eval_user`.
 	- [ ] Add a compact preferences panel (read-only) pulled from `get_rider_profile`.
 	- [ ] Add per-tab loading + empty states and a refresh action.
-	- [ ] Keep a single user selector at the top to reuse across tabs.
+
+	Current handoff point:
+	- The landing page is now a single-column overview with tab tips.
+	- The app shell and chat flow are in place.
+	- Next pick-up point is wiring real data into the Vehicle, Reminders, Trips, and Profile tabs.
 
 3. Add a garage operations agent.
 	Approach: synthesize service history, reminders, stock, and planned trips into a maintenance calendar.

@@ -25,6 +25,7 @@ from google.cloud import logging as google_cloud_logging
 
 from app.app_utils.telemetry import setup_telemetry
 from app.app_utils.typing import Feedback
+from app.tools import get_tab_data
 
 env_candidates = [
     Path(__file__).resolve().parents[1] / ".env",
@@ -98,6 +99,12 @@ def health_check() -> dict[str, str]:
 def ui() -> FileResponse:
     """Serve the lightweight chat UI."""
     return FileResponse(UI_INDEX_PATH)
+
+
+@app.get("/tab-data")
+def tab_data(user_id: str = "eval_user") -> dict[str, object]:
+    """Return the read-only tab payload used by the frontend."""
+    return get_tab_data(user_id)
 
 
 @app.get("/ready")

@@ -166,6 +166,9 @@ http://127.0.0.1:8090/ui
 .\.venv\Scripts\python.exe -c "import requests; print(requests.get('http://127.0.0.1:8000/health').json())"
 # Readiness (shows whether MDB_MCP_CONNECTION_STRING is set)
 .\.venv\Scripts\python.exe -c "import requests; print(requests.get('http://127.0.0.1:8000/ready').json())"
+# Run the UI from the FastAPI server and check the console for any errors related to the MCP toolset or agent responses.
+cd agent
+.\.venv\Scripts\python.exe -m uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
 ```
 
 5. Run integration tests (requires `pytest`)

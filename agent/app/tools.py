@@ -1,7 +1,15 @@
 import os
-from pymongo import MongoClient
+from pymongo import DESCENDING, MongoClient
 from datetime import datetime, timezone, date, timedelta
 import requests
+
+from app.app_utils.typing import (
+    ProfileTabData,
+    RemindersTabData,
+    TabDataBundle,
+    TripsTabData,
+    VehicleTabData,
+)
 
 
 def get_connection_string() -> str:
@@ -58,6 +66,127 @@ def get_rider_profile(user_id: str) -> dict:
         )
 
     return result if result else {"status": "not_found", "user_id": user_id}
+
+
+def get_tab_data(user_id: str = "eval_user") -> dict:
+    """Build the read-only tab payload used by the frontend."""
+
+    connection_string = os.getenv("MDB_MCP_CONNECTION_STRING")
+    if not connection_string:
+        bundle = TabDataBundle(
+            vehicle=VehicleTabData(
+                state="empty",
+                message="MongoDB is not configured.",
+            ),
+            reminders=RemindersTabData(
+                state="empty",
+                message="MongoDB is not configured.",
+            ),
+            trips=TripsTabData(
+                state="empty",
+                message="MongoDB is not configured.",
+            ),
+            profile=ProfileTabData(
+                state="empty",
+                user_id=user_id,
+                message="MongoDB is not configured.",
+            ),
+        )
+        return bundle.model_dump(mode="json")
+
+    with MongoClient(connection_string) as client:
+        db = client["ride_agent_db"]
+
+        latest_ride = (
+            db["ride_logs"].find({}, {"_id": 0}).sort("date", DESCENDING).limit(1)
+        )
+        latest_ride_doc = next(latest_ride, None)
+
+        open_reminders = list(
+            db["service_reminders"]
+            .find({"status": "open"}, {"_id": 0})
+            .sort([("due_date", 1), ("due_km", 1)])
+        )
+
+        recent_rides = list(
+            db["ride_logs"].find({}, {"_id": 0}).sort("date", DESCENDING).limit(5)
+        )
+
+        profile = db["rider_profiles"].find_one({"user_id": user_id}, {"_id": 0})
+
+    latest_odometer_end_km = None
+    last_ride_date = None
+    if latest_ride_doc:
+        latest_odometer_end_km = latest_ride_doc.get("odometer_end_km")
+        last_ride_date = latest_ride_doc.get("date")
+
+    next_service_highlight = None
+    if open_reminders:
+        reminder = open_reminders[0]
+        reminder_service_type = reminder.get("service_type") or "service"
+        reminder_due_km = reminder.get("due_km")
+        reminder_due_date = reminder.get("due_date")
+        parts = [f"{reminder_service_type} due soon"]
+        if reminder_due_km is not None:
+            parts.append(f"at {reminder_due_km} km")
+        if reminder_due_date:
+            parts.append(f"by {reminder_due_date}")
+        next_service_highlight = " ".join(parts)
+    else:
+        next_service_highlight = "No open service reminders."
+
+    total_distance_km = 0
+    total_fuel_liters = 0
+    weather_values: list[str] = []
+    for ride in recent_rides:
+        distance_km = ride.get("distance_km")
+        fuel_used_liters = ride.get("fuel_used_liters")
+        weather = ride.get("weather")
+        if isinstance(distance_km, (int, float)):
+            total_distance_km += distance_km
+        if isinstance(fuel_used_liters, (int, float)):
+            total_fuel_liters += fuel_used_liters
+        if isinstance(weather, str) and weather:
+            weather_values.append(weather)
+
+    weather_summary = None
+    if weather_values:
+        unique_weather = list(dict.fromkeys(weather_values))
+        weather_summary = unique_weather[0] if len(unique_weather) == 1 else "Mixed recent weather"
+
+    bundle = TabDataBundle(
+        vehicle=VehicleTabData(
+            state="ready" if latest_ride_doc or open_reminders else "empty",
+            latest_odometer_end_km=latest_odometer_end_km,
+            last_ride_date=last_ride_date,
+            next_service_highlight=next_service_highlight,
+            message=None if (latest_ride_doc or open_reminders) else "No ride history or reminders found.",
+        ),
+        reminders=RemindersTabData(
+            state="ready" if open_reminders else "empty",
+            open_reminders=open_reminders,
+            message=None if open_reminders else "No open service reminders.",
+        ),
+        trips=TripsTabData(
+            state="ready" if recent_rides else "empty",
+            recent_rides=recent_rides,
+            totals={
+                "ride_count": len(recent_rides),
+                "distance_km": total_distance_km,
+                "fuel_liters": total_fuel_liters,
+            },
+            weather_summary=weather_summary,
+            message=None if recent_rides else "No recent rides found.",
+        ),
+        profile=ProfileTabData(
+            state="ready" if profile else "empty",
+            user_id=user_id,
+            profile=profile or {},
+            message=None if profile else f"No rider profile found for {user_id}.",
+        ),
+    )
+
+    return bundle.model_dump(mode="json")
 
 def update_rider_preferences(
     user_id: str,

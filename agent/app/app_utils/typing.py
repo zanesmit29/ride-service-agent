@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import uuid
+from datetime import date
 from typing import (
     Literal,
 )
@@ -44,3 +45,49 @@ class Feedback(BaseModel):
     service_name: Literal["agent"] = "agent"
     user_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+
+class VehicleTabData(BaseModel):
+    """Read-only vehicle status payload for the UI."""
+
+    state: Literal["loading", "ready", "empty", "error"] = "ready"
+    latest_odometer_end_km: int | None = None
+    last_ride_date: date | None = None
+    next_service_highlight: str | None = None
+    message: str | None = None
+
+
+class RemindersTabData(BaseModel):
+    """Read-only reminders payload for the UI."""
+
+    state: Literal["loading", "ready", "empty", "error"] = "ready"
+    open_reminders: list[dict[str, object]] = Field(default_factory=list)
+    message: str | None = None
+
+
+class TripsTabData(BaseModel):
+    """Read-only trip summary payload for the UI."""
+
+    state: Literal["loading", "ready", "empty", "error"] = "ready"
+    recent_rides: list[dict[str, object]] = Field(default_factory=list)
+    totals: dict[str, object] = Field(default_factory=dict)
+    weather_summary: str | None = None
+    message: str | None = None
+
+
+class ProfileTabData(BaseModel):
+    """Read-only rider profile payload for the UI."""
+
+    state: Literal["loading", "ready", "empty", "error"] = "ready"
+    user_id: str
+    profile: dict[str, object] = Field(default_factory=dict)
+    message: str | None = None
+
+
+class TabDataBundle(BaseModel):
+    """Combined tab-data contract for the frontend."""
+
+    vehicle: VehicleTabData
+    reminders: RemindersTabData
+    trips: TripsTabData
+    profile: ProfileTabData
