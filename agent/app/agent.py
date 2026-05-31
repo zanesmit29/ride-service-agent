@@ -20,8 +20,14 @@ from google.adk.agents import Agent
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
-from .tools import insert_reminder, get_rider_profile, update_rider_preferences, get_weather_forecast
-from .prompts import ROOT_AGENT_INSTRUCTIONS, SERVICE_AGENT_INSTRUCTIONS, DIAGNOSTICS_AGENT_INSTRUCTIONS, TRIP_PLANNING_AGENT_INSTRUCTIONS
+from .tools import insert_reminder, get_rider_profile, update_rider_preferences, get_weather_forecast, insert_ride_log
+from .prompts import (
+    ROOT_AGENT_INSTRUCTIONS,
+    SERVICE_AGENT_INSTRUCTIONS,
+    DIAGNOSTICS_AGENT_INSTRUCTIONS,
+    TRIP_PLANNING_AGENT_INSTRUCTIONS,
+    RIDE_LOGGING_AGENT_INSTRUCTIONS,
+)
 
 env_candidates = [
     Path(__file__).resolve().parents[1] / ".env",
@@ -94,12 +100,23 @@ trip_planning_agent = Agent(
     output_key="trip_planning_advice",
 )
 
+ride_logging_agent = Agent(
+    model="gemini-2.5-pro",
+    name="ride_logging_agent",
+    description="Logs ride details to the database after a trip is completed, including date, distance, and any notes about the ride.",
+    instruction=RIDE_LOGGING_AGENT_INSTRUCTIONS,
+    tools=[
+        insert_ride_log,
+    ],
+    output_key="logging_confirmation",
+)
+
 root_agent = Agent(
     model="gemini-2.5-pro",
     name="ride_service_agent",
     description="Coordinates the motorcycle assistant, routing maintenance and trip-readiness questions to service_agent and symptom-based diagnosis questions to diagnostics_agent.",
     instruction=ROOT_AGENT_INSTRUCTIONS,
     tools=[get_rider_profile, update_rider_preferences],
-    sub_agents=[service_agent, diagnostics_agent, trip_planning_agent],
+    sub_agents=[service_agent, diagnostics_agent, trip_planning_agent, ride_logging_agent],
 )
 

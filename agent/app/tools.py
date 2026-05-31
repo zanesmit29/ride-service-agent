@@ -1,6 +1,6 @@
 import os
 from pymongo import DESCENDING, MongoClient
-from datetime import datetime, timezone, date, timedelta
+from datetime import datetime, timezone, date as datetime_date, timedelta
 import requests
 
 from app.app_utils.typing import (
@@ -44,6 +44,79 @@ def insert_reminder(service_type: str, due_km: int, due_date: str) -> dict:
         })
 
     return {"status": "logged", "inserted_id": str(result.inserted_id)}
+
+def insert_ride_log(
+    date: str | None = None,
+    odometer_end_km: int | None = None,
+    distance_km: int | None = None,
+    route_type: str | None = None,
+    avg_speed_kmh: int | None = None,
+    fuel_used_liters: float | None = None,
+    weather: str | None = None,
+    notes: str | None = None,
+) -> dict:
+    """Logs a completed ride to the database with details about the trip.
+    Insert will proceed even if some fields are missing; missing keys are written
+    explicitly as null so downstream consumers see the same schema.
+
+    Call this only when the user explicitly confirms with 'yes' or 'approve'.
+    """
+    connection_string = get_connection_string()
+
+    # Normalize/validate inputs where possible, but allow missing fields.
+    # Date: default to today if not provided or invalid.
+    try:
+        if date:
+            # Accept ISO date-only strings (YYYY-MM-DD)
+            parsed_date = date
+            datetime_date.fromisoformat(parsed_date)
+        else:
+            parsed_date = datetime.now(timezone.utc).date().isoformat()
+    except Exception:
+        parsed_date = datetime.now(timezone.utc).date().isoformat()
+
+    def _to_int(value):
+        try:
+            if value is None:
+                return None
+            return int(value)
+        except Exception:
+            return None
+
+    def _to_float(value):
+        try:
+            if value is None:
+                return None
+            return float(value)
+        except Exception:
+            return None
+
+    odometer_val = _to_int(odometer_end_km)
+    distance_val = _to_int(distance_km)
+    avg_speed_val = _to_int(avg_speed_kmh)
+    fuel_val = _to_float(fuel_used_liters)
+
+    # Ensure string fields are either a string or None
+    route_type_val = route_type if isinstance(route_type, str) and route_type else None
+    weather_val = weather if isinstance(weather, str) and weather else None
+    notes_val = notes if isinstance(notes, str) and notes else None
+
+    doc = {
+        "date": parsed_date,
+        "odometer_end_km": odometer_val,
+        "distance_km": distance_val,
+        "route_type": route_type_val,
+        "avg_speed_kmh": avg_speed_val,
+        "fuel_used_liters": fuel_val,
+        "weather": weather_val,
+        "notes": notes_val,
+    }
+
+    with MongoClient(connection_string) as client:
+        db = client["ride_agent_db"]
+        result = db["ride_logs"].insert_one(dict(doc))
+
+    return {"status": "logged", "inserted_id": str(result.inserted_id), "doc": dict(doc)}
 
 
 def get_rider_profile(user_id: str) -> dict:
@@ -329,8 +402,8 @@ def get_weather_forecast(
         A dict with forecast summary information for the requested period.
     """
     try:
-        start = date.fromisoformat(start_date)
-        end = date.fromisoformat(end_date)
+        start = datetime_date.fromisoformat(start_date)
+        end = datetime_date.fromisoformat(end_date)
     except ValueError:
         return {
             "status": "error",
