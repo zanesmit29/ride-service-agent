@@ -1,4 +1,5 @@
 import os
+import re
 from pymongo import DESCENDING, MongoClient
 from datetime import datetime, timezone, date as datetime_date, timedelta
 import requests
@@ -17,6 +18,93 @@ def get_connection_string() -> str:
     if not connection_string:
         raise ValueError("MDB_MCP_CONNECTION_STRING is not set")
     return connection_string
+
+
+def _parse_explicit_date(text: str) -> datetime_date | None:
+    cleaned_text = text.strip()
+    if not cleaned_text:
+        return None
+
+    for date_format in ("%Y-%m-%d", "%d %b %Y", "%d %B %Y", "%d/%m/%Y", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(cleaned_text, date_format).date()
+        except ValueError:
+            continue
+
+    return None
+
+
+def parse_natural_date(text: str, *, today: datetime_date | None = None) -> datetime_date | None:
+    """Parse a natural-language date into a concrete date when possible.
+
+    Supports relative phrases like today, tomorrow, yesterday, next weekend,
+    plus common explicit date formats.
+    """
+    today = today or datetime_date.today()
+    cleaned_text = text.strip().lower()
+
+    if not cleaned_text:
+        return None
+
+    if cleaned_text in {"today", "now"}:
+        return today
+
+    if cleaned_text == "tomorrow":
+        return today + timedelta(days=1)
+
+    if cleaned_text == "yesterday":
+        return today - timedelta(days=1)
+
+    if cleaned_text == "next weekend":
+        days_until_saturday = (5 - today.weekday()) % 7
+        if days_until_saturday == 0:
+            days_until_saturday = 7
+        saturday = today + timedelta(days=days_until_saturday)
+        return saturday
+
+    explicit_date = _parse_explicit_date(text)
+    if explicit_date:
+        return explicit_date
+
+    return None
+
+
+def parse_natural_date_range(text: str, *, today: datetime_date | None = None) -> tuple[str | None, str | None]:
+    """Parse a natural-language date or date range into ISO date strings.
+
+    Examples:
+    - "today" -> (YYYY-MM-DD, YYYY-MM-DD)
+    - "next weekend" -> (Saturday ISO, Sunday ISO)
+    - "5 Jun 2026 to 7 Jun 2026" -> (start ISO, end ISO)
+    """
+    today = today or datetime_date.today()
+    cleaned_text = text.strip()
+    lowered_text = cleaned_text.lower()
+
+    range_match = re.split(r"\s+(?:to|through|until|till)\s+", cleaned_text, maxsplit=1, flags=re.IGNORECASE)
+    if len(range_match) == 2:
+        start_text, end_text = range_match
+        start_date = parse_natural_date(start_text, today=today)
+        end_date = parse_natural_date(end_text, today=today)
+        return (
+            start_date.isoformat() if start_date else None,
+            end_date.isoformat() if end_date else None,
+        )
+
+    if lowered_text == "next weekend":
+        days_until_saturday = (5 - today.weekday()) % 7
+        if days_until_saturday == 0:
+            days_until_saturday = 7
+        saturday = today + timedelta(days=days_until_saturday)
+        sunday = saturday + timedelta(days=1)
+        return saturday.isoformat(), sunday.isoformat()
+
+    parsed_date = parse_natural_date(cleaned_text, today=today)
+    if parsed_date:
+        iso_date = parsed_date.isoformat()
+        return iso_date, iso_date
+
+    return None, None
 
 
 def insert_reminder(service_type: str, due_km: int, due_date: str) -> dict:
@@ -64,15 +152,18 @@ def insert_ride_log(
     connection_string = get_connection_string()
 
     # Normalize/validate inputs where possible, but allow missing fields.
-    # Date: default to today if not provided or invalid.
-    try:
-        if date:
-            # Accept ISO date-only strings (YYYY-MM-DD)
-            parsed_date = date
-            datetime_date.fromisoformat(parsed_date)
-        else:
-            parsed_date = datetime.now(timezone.utc).date().isoformat()
-    except Exception:
+    # Date: normalize natural language to an ISO date, defaulting to today if missing.
+    if date:
+        parsed_date, parsed_end_date = parse_natural_date_range(date, today=datetime.now(timezone.utc).date())
+        if parsed_end_date and parsed_end_date != parsed_date:
+            return {
+                "status": "error",
+                "message": "Please provide a single ride date, not a date range.",
+                "parsed_date": parsed_date,
+                "parsed_end_date": parsed_end_date,
+            }
+        parsed_date = parsed_date or datetime.now(timezone.utc).date().isoformat()
+    else:
         parsed_date = datetime.now(timezone.utc).date().isoformat()
 
     def _to_int(value):
