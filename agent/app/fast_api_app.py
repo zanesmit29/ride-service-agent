@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 import google.auth
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from google.adk.cli.fast_api import get_fast_api_app
 from google.cloud import logging as google_cloud_logging
 
@@ -63,7 +63,7 @@ artifact_service_uri = f"gs://{logs_bucket_name}" if logs_bucket_name else None
 
 app: FastAPI = get_fast_api_app(
     agents_dir=AGENT_DIR,
-    web=True,
+    web=False,
     artifact_service_uri=artifact_service_uri,
     allow_origins=allow_origins,
     session_service_uri=session_service_uri,
@@ -71,6 +71,10 @@ app: FastAPI = get_fast_api_app(
 )
 app.title = "agent"
 app.description = "API for interacting with the Agent agent"
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/ui", status_code=307)
 
 UI_INDEX_PATH = Path(__file__).parent / "ui" / "index.html"
 
