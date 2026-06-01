@@ -84,6 +84,15 @@ class ProfileTabData(BaseModel):
     message: str | None = None
 
 
+class DashboardTabData(BaseModel):
+    """Read-only dashboard KPI payload for the UI."""
+
+    state: Literal["loading", "ready", "empty", "error"] = "ready"
+    total_rides: int | None = None
+    total_distance_km: float | None = None
+    message: str | None = None
+
+
 class TabDataBundle(BaseModel):
     """Combined tab-data contract for the frontend."""
 
@@ -91,3 +100,4 @@ class TabDataBundle(BaseModel):
     reminders: RemindersTabData
     trips: TripsTabData
     profile: ProfileTabData
+    dashboard: DashboardTabData | None = None

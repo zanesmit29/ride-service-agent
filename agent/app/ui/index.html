@@ -651,6 +651,132 @@
         padding: 14px;
       }
 
+      .dashboard-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-top: 12px;
+      }
+
+      .dashboard-badge,
+      .dashboard-state {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .dashboard-badge {
+        background: linear-gradient(135deg, rgba(255, 85, 51, 0.18), rgba(255, 143, 92, 0.1));
+        color: var(--text);
+      }
+
+      .dashboard-state {
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .dashboard-insights {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .dashboard-insight {
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 14px;
+      }
+
+      .dashboard-insight-hero {
+        background: linear-gradient(180deg, rgba(255, 85, 51, 0.16), rgba(255, 255, 255, 0.04));
+        border-color: rgba(255, 85, 51, 0.22);
+      }
+
+      .dashboard-odometer {
+        display: block;
+        margin: 2px 0 8px;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        line-height: 0.95;
+        letter-spacing: -0.06em;
+        font-weight: 800;
+        color: var(--text);
+        text-shadow: 0 0 24px rgba(255, 85, 51, 0.12);
+      }
+
+      .dashboard-insight strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.96rem;
+      }
+
+      .dashboard-insight span {
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
+      .dashboard-mini-trend {
+        display: flex;
+        align-items: end;
+        gap: 6px;
+        height: 54px;
+        margin-top: 12px;
+      }
+
+      .dashboard-mini-trend span {
+        flex: 1;
+        border-radius: 999px 999px 4px 4px;
+        background: linear-gradient(180deg, rgba(255, 143, 92, 0.9), rgba(255, 85, 51, 0.35));
+        box-shadow: 0 0 16px rgba(255, 85, 51, 0.12);
+        min-height: 12px;
+      }
+
+      .dashboard-mini-trend span.is-low {
+        opacity: 0.45;
+      }
+
+      .dashboard-mini-trend span.is-mid {
+        opacity: 0.7;
+      }
+
+      .dashboard-mini-trend span.is-high {
+        opacity: 1;
+      }
+
+      .dashboard-trends {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .trend-card {
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+        padding: 14px;
+      }
+
+      .trend-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.96rem;
+      }
+
+      .trend-card span {
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
       /* Spacing for profile preference rows and advanced section */
       .profile-row {
         margin-bottom: 8px;
@@ -1021,6 +1147,7 @@
 
         <nav class="tabs" aria-label="App sections">
           <button class="tab active" data-tab="copilot">Copilot</button>
+          <button class="tab" data-tab="dashboard">Dashboard</button>
           <button class="tab" data-tab="vehicle">Vehicle</button>
           <button class="tab" data-tab="reminders">Reminders</button>
           <button class="tab" data-tab="trips">Trips</button>
@@ -1042,6 +1169,40 @@
           </div>
 
           <aside class="side-column">
+            <section id="dashboard" class="tab-panel panel">
+              <div class="refresh-bar">
+                <button class="secondary tab-refresh" data-tab="dashboard">Refresh view</button>
+              </div>
+              <h4>Dashboard</h4>
+              <p id="dashboardSummary">Fleet-wide summary from the backend contract.</p>
+              <div class="dashboard-meta">
+                <span class="dashboard-badge">Fleet overview</span>
+                <span class="dashboard-state" id="dashboardState">Loading metrics</span>
+              </div>
+              <div class="stat-grid">
+                <div class="stat"><strong>Total rides</strong><span id="dashboardRides">Loading dashboard data...</span></div>
+                <div class="stat"><strong>Total distance</strong><span id="dashboardDistance">Loading dashboard data...</span></div>
+              </div>
+              <div class="dashboard-insights">
+                <div class="dashboard-insight"><strong>Ride cadence</strong><span id="dashboardCadence">Waiting for recent ride data.</span></div>
+                <div class="dashboard-insight dashboard-insight-hero">
+                  <strong>Latest ride</strong>
+                  <span class="dashboard-odometer" id="dashboardOdometer">-- km</span>
+                  <span id="dashboardLatestRide">Waiting for latest ride data.</span>
+                </div>
+              </div>
+              <div class="dashboard-trends">
+                <div class="trend-card">
+                  <strong>Ride distance trend</strong>
+                  <span id="dashboardDistanceTrend">Waiting for ride trend data.</span>
+                </div>
+                <div class="trend-card">
+                  <strong>Ride cadence trend</strong>
+                  <span id="dashboardCadenceTrend">Waiting for cadence trend data.</span>
+                </div>
+              </div>
+            </section>
+
             <section id="vehicle" class="tab-panel panel">
               <div class="refresh-bar">
                 <button class="secondary tab-refresh" data-tab="vehicle">Refresh view</button>
@@ -1111,6 +1272,15 @@
       const vehicleSummary = document.getElementById("vehicleSummary");
       const vehicleOdometer = document.getElementById("vehicleOdometer");
       const vehicleService = document.getElementById("vehicleService");
+      const dashboardSummary = document.getElementById("dashboardSummary");
+      const dashboardState = document.getElementById("dashboardState");
+      const dashboardRides = document.getElementById("dashboardRides");
+      const dashboardDistance = document.getElementById("dashboardDistance");
+      const dashboardCadence = document.getElementById("dashboardCadence");
+      const dashboardOdometer = document.getElementById("dashboardOdometer");
+      const dashboardLatestRide = document.getElementById("dashboardLatestRide");
+      const dashboardDistanceTrend = document.getElementById("dashboardDistanceTrend");
+      const dashboardCadenceTrend = document.getElementById("dashboardCadenceTrend");
       const remindersSummary = document.getElementById("remindersSummary");
       const remindersList = document.getElementById("remindersList");
       const tripsSummary = document.getElementById("tripsSummary");
@@ -1162,6 +1332,96 @@
         vehicleSummary.textContent = `Vehicle data unavailable: ${message}`;
         vehicleOdometer.textContent = "Unable to load odometer data.";
         vehicleService.textContent = "Unable to load service data.";
+      }
+
+      function renderDashboardData(dashboard, context = {}) {
+        if (!dashboardSummary || !dashboardState || !dashboardRides || !dashboardDistance || !dashboardCadence || !dashboardOdometer || !dashboardLatestRide || !dashboardDistanceTrend || !dashboardCadenceTrend) {
+          return;
+        }
+
+        const recentRides = Array.isArray(context.recentRides) ? context.recentRides : [];
+        const openReminders = Array.isArray(context.openReminders) ? context.openReminders : [];
+
+        if (!dashboard || typeof dashboard !== "object") {
+          dashboardSummary.textContent = "Dashboard summary is not available yet.";
+          dashboardState.textContent = "Unavailable";
+          dashboardRides.textContent = "No data";
+          dashboardDistance.textContent = "No data";
+          dashboardCadence.textContent = "No recent ride data.";
+          dashboardOdometer.textContent = "-- km";
+          dashboardLatestRide.textContent = "No latest ride data.";
+          dashboardDistanceTrend.textContent = "No trend data.";
+          dashboardCadenceTrend.textContent = "No trend data.";
+          return;
+        }
+
+        const state = dashboard.state || "empty";
+        const totalRides = dashboard.total_rides;
+        const totalDistance = dashboard.total_distance_km;
+
+        if (state === "ready") {
+          dashboardSummary.textContent = dashboard.message || "Keep track of your rides and updated with open maintenance reminders.";
+        } else if (state === "empty") {
+          dashboardSummary.textContent = dashboard.message || "No ride history is available yet.";
+        } else if (state === "error") {
+          dashboardSummary.textContent = dashboard.message || "Dashboard metrics could not be loaded.";
+        } else {
+          dashboardSummary.textContent = dashboard.message || "Dashboard data is loading.";
+        }
+
+        dashboardState.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+
+        dashboardRides.textContent = totalRides !== null && totalRides !== undefined ? `${totalRides} rides` : "No data";
+        dashboardDistance.textContent = totalDistance !== null && totalDistance !== undefined ? `${totalDistance} km` : "No data";
+
+        const rideCount = recentRides.length;
+        const avgDistance = rideCount
+          ? recentRides.reduce((sum, ride) => sum + (Number(ride.distance_km) || 0), 0) / rideCount
+          : 0;
+
+        dashboardCadence.textContent = rideCount
+          ? `${rideCount} recent rides · avg ${avgDistance.toFixed(1)} km`
+          : "No recent rides in the current snapshot.";
+
+        const latestRide = recentRides[0] || null;
+        dashboardOdometer.textContent = latestRide && latestRide.odometer_end_km !== null && latestRide.odometer_end_km !== undefined
+          ? `${latestRide.odometer_end_km} km`
+          : "-- km";
+        dashboardLatestRide.textContent = latestRide
+          ? `${latestRide.date ? formatDate(latestRide.date) : "Unknown date"} · ${Number(latestRide.distance_km) || 0} km`
+          : "No latest ride available.";
+
+        const trendRides = recentRides.slice(0, 10);
+        const splitPoint = Math.ceil(trendRides.length / 2);
+        const newerHalf = trendRides.slice(0, splitPoint);
+        const olderHalf = trendRides.slice(splitPoint);
+        const sumDistance = (rides) => rides.reduce((sum, ride) => sum + (Number(ride.distance_km) || 0), 0);
+
+        const newerDistance = sumDistance(newerHalf);
+        const olderDistance = sumDistance(olderHalf);
+        const distanceDelta = olderDistance > 0 ? ((newerDistance - olderDistance) / olderDistance) * 100 : null;
+        dashboardDistanceTrend.textContent = trendRides.length
+          ? olderHalf.length
+            ? `${newerHalf.length} recent rides covered ${newerDistance.toFixed(1)} km, compared with ${olderDistance.toFixed(1)} km in the older set${distanceDelta === null ? "" : ` (${distanceDelta >= 0 ? "+" : ""}${distanceDelta.toFixed(0)}%)`}.`
+            : `${newerHalf.length} recent rides covered ${newerDistance.toFixed(1)} km in the latest snapshot.`
+          : "No distance trend data yet.";
+
+        const sevenDayMs = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const recent7Days = recentRides.filter((ride) => {
+          const rideDate = Date.parse(ride.date);
+          return Number.isFinite(rideDate) && now - rideDate <= sevenDayMs;
+        }).length;
+        const previous7Days = recentRides.filter((ride) => {
+          const rideDate = Date.parse(ride.date);
+          return Number.isFinite(rideDate) && now - rideDate > sevenDayMs && now - rideDate <= 2 * sevenDayMs;
+        }).length;
+        const cadenceDelta = previous7Days > 0 ? ((recent7Days - previous7Days) / previous7Days) * 100 : null;
+        dashboardCadenceTrend.textContent = recentRides.length
+          ? previous7Days
+            ? `${recent7Days} rides in the last 7 days vs ${previous7Days} in the prior 7 days${cadenceDelta === null ? "" : ` (${cadenceDelta >= 0 ? "+" : ""}${cadenceDelta.toFixed(0)}%)`}.`
+            : `${recent7Days} rides in the last 7 days.`
+          : "No cadence trend data yet.";
       }
 
       function renderRemindersData(reminders) {
@@ -1386,6 +1646,10 @@
           throw new Error(`Tab data error: ${response.status}`);
         }
         const data = await response.json();
+        renderDashboardData(data.dashboard || {}, {
+          recentRides: Array.isArray(data.trips?.recent_rides) ? data.trips.recent_rides : [],
+          openReminders: Array.isArray(data.reminders?.open_reminders) ? data.reminders.open_reminders : [],
+        });
         renderVehicleData(data.vehicle || {});
         renderRemindersData(data.reminders || {});
         renderTripsData(data.trips || {});
@@ -1758,5 +2022,5 @@
       addMessage("assistant", "Welcome aboard. Start with a trip question, a service check, or a weather route ask when you're ready.", { forceNew: true });
       setStatus("Ready", "idle");
     </script>
-  </body>
-</html>
+    </body>
+    </html>

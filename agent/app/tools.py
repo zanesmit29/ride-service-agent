@@ -1,10 +1,18 @@
+import asyncio
+import json
 import os
 import re
 from pymongo import DESCENDING, MongoClient
 from datetime import datetime, timezone, date as datetime_date, timedelta
 import requests
+from mcp import StdioServerParameters
+from google.adk.tools.mcp_tool.mcp_session_manager import (
+    MCPSessionManager,
+    StdioConnectionParams,
+)
 
 from app.app_utils.typing import (
+    DashboardTabData,
     ProfileTabData,
     RemindersTabData,
     TabDataBundle,
@@ -18,6 +26,169 @@ def get_connection_string() -> str:
     if not connection_string:
         raise ValueError("MDB_MCP_CONNECTION_STRING is not set")
     return connection_string
+
+
+def _bool_env(name: str) -> bool:
+    value = os.getenv(name, "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _get_mcp_env() -> dict[str, str]:
+    connection_string = os.getenv("MDB_MCP_CONNECTION_STRING")
+    if not connection_string:
+        return {}
+    return {
+        "MDB_MCP_CONNECTION_STRING": connection_string,
+        "MDB_MCP_DISABLED_TOOLS": "atlas,create-index,collection-indexes",
+        "MDB_MCP_TELEMETRY": "disabled",
+    }
+
+
+def _coerce_int(value: object) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except Exception:
+        return None
+
+
+def _coerce_float(value: object) -> float | None:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except Exception:
+        return None
+
+
+def _extract_mcp_documents(payload: dict) -> list[dict]:
+    structured = payload.get("structuredContent") or payload.get("structured_content")
+    if isinstance(structured, list):
+        return [item for item in structured if isinstance(item, dict)]
+    if isinstance(structured, dict):
+        for key in ("documents", "result", "data", "items", "records"):
+            value = structured.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+
+    content = payload.get("content") or []
+    for item in content:
+        if not isinstance(item, dict):
+            continue
+        text = item.get("text")
+        if not isinstance(text, str):
+            continue
+        try:
+            decoded = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(decoded, list):
+            return [entry for entry in decoded if isinstance(entry, dict)]
+        if isinstance(decoded, dict):
+            return [decoded]
+    return []
+
+
+async def _run_mcp_aggregate(pipeline: list[dict]) -> dict | None:
+    manager = MCPSessionManager(
+        connection_params=StdioConnectionParams(
+            server_params=StdioServerParameters(
+                command="npx",
+                args=["-y", "mongodb-mcp-server"],
+                env=_get_mcp_env(),
+            ),
+            timeout=120,
+        ),
+    )
+    try:
+        session = await manager.create_session()
+        result = await session.call_tool(
+            "aggregate",
+            arguments={
+                "database": "ride_agent_db",
+                "collection": "ride_logs",
+                "pipeline": pipeline,
+            },
+        )
+        return result.model_dump(exclude_none=True, mode="json")
+    finally:
+        await manager.close()
+
+
+def _get_dashboard_totals_mcp() -> tuple[int | None, float | None] | None:
+    pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "total_rides": {"$sum": 1},
+                "total_distance_km": {"$sum": {"$ifNull": ["$distance_km", 0]}},
+            }
+        }
+    ]
+    try:
+        payload = asyncio.run(_run_mcp_aggregate(pipeline))
+    except RuntimeError:
+        return None
+    except Exception:
+        return None
+    if not payload:
+        return None
+    docs = _extract_mcp_documents(payload)
+    if not docs:
+        return None
+    doc = docs[0]
+    total_rides = _coerce_int(doc.get("total_rides"))
+    total_distance_km = _coerce_float(
+        doc.get("total_distance_km") or doc.get("total_distance")
+    )
+    if total_rides is None and total_distance_km is None:
+        return None
+    return total_rides, total_distance_km
+
+
+def _get_dashboard_totals_python(db) -> tuple[int | None, float | None] | None:
+    pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "total_rides": {"$sum": 1},
+                "total_distance_km": {"$sum": {"$ifNull": ["$distance_km", 0]}},
+            }
+        }
+    ]
+    result = list(db["ride_logs"].aggregate(pipeline))
+    if not result:
+        return 0, 0.0
+    doc = result[0]
+    total_rides = _coerce_int(doc.get("total_rides"))
+    total_distance_km = _coerce_float(doc.get("total_distance_km"))
+    if total_rides is None and total_distance_km is None:
+        return None
+    return total_rides, total_distance_km
+
+
+def _build_dashboard_tab_data(
+    total_rides: int | None,
+    total_distance_km: float | None,
+) -> DashboardTabData:
+    if total_rides is None and total_distance_km is None:
+        return DashboardTabData(
+            state="error",
+            message="Dashboard metrics unavailable.",
+        )
+    if total_rides in (0, None):
+        return DashboardTabData(
+            state="empty",
+            total_rides=total_rides or 0,
+            total_distance_km=total_distance_km or 0.0,
+            message="No ride history yet.",
+        )
+    return DashboardTabData(
+        state="ready",
+        total_rides=total_rides,
+        total_distance_km=total_distance_km,
+    )
 
 
 def _parse_explicit_date(text: str) -> datetime_date | None:
@@ -273,6 +444,10 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
                 user_id=user_id,
                 message="MongoDB is not configured.",
             ),
+            dashboard=DashboardTabData(
+                state="empty",
+                message="MongoDB is not configured.",
+            ),
         )
         return bundle.model_dump(mode="json")
 
@@ -295,6 +470,12 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
         )
 
         profile = db["rider_profiles"].find_one({"user_id": user_id}, {"_id": 0})
+
+        dashboard_totals = None
+        if not _bool_env("USE_PYTHON_FALLBACK"):
+            dashboard_totals = _get_dashboard_totals_mcp()
+        if dashboard_totals is None:
+            dashboard_totals = _get_dashboard_totals_python(db)
 
     latest_odometer_end_km = None
     last_ride_date = None
@@ -336,6 +517,10 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
         unique_weather = list(dict.fromkeys(weather_values))
         weather_summary = unique_weather[0] if len(unique_weather) == 1 else "Mixed recent weather"
 
+    dashboard = None
+    if dashboard_totals is not None:
+        dashboard = _build_dashboard_tab_data(*dashboard_totals)
+
     bundle = TabDataBundle(
         vehicle=VehicleTabData(
             state="ready" if latest_ride_doc or open_reminders else "empty",
@@ -366,6 +551,7 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
             profile=profile or {},
             message=None if profile else f"No rider profile found for {user_id}.",
         ),
+        dashboard=dashboard,
     )
 
     return bundle.model_dump(mode="json")

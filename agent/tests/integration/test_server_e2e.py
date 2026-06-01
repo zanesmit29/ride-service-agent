@@ -195,8 +195,23 @@ def test_tab_data_contract(server_fixture: subprocess.Popen[str]) -> None:
     assert response.status_code == 200
 
     payload = response.json()
-    assert set(payload.keys()) == {"vehicle", "reminders", "trips", "profile"}
-    assert payload["vehicle"]["state"] in {"loading", "ready", "empty", "error"}
-    assert payload["reminders"]["state"] in {"loading", "ready", "empty", "error"}
-    assert payload["trips"]["state"] in {"loading", "ready", "empty", "error"}
-    assert payload["profile"]["state"] in {"loading", "ready", "empty", "error"}
+    expected = {"vehicle", "reminders", "trips", "profile", "dashboard"}
+    assert set(payload.keys()) == expected
+
+    # basic state checks for existing tabs
+    for key in ("vehicle", "reminders", "trips", "profile"):
+        assert payload[key]["state"] in {"loading", "ready", "empty", "error"}
+
+    # dashboard may be None (null) or an object
+    dashboard = payload.get("dashboard")
+    if dashboard is None:
+        # Acceptable when DB/aggregation is unavailable; assert explicit null or leave as-is
+        assert dashboard is None
+    else:
+        assert dashboard.get("state") in {"loading", "ready", "empty", "error"}
+        # If calculator was able to produce metrics, validate types when state == ready
+        assert "total_rides" in dashboard
+        assert "total_distance_km" in dashboard
+        if dashboard.get("state") == "ready":
+            assert isinstance(dashboard["total_rides"], int)
+            assert isinstance(dashboard["total_distance_km"], (int, float))

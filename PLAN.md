@@ -53,17 +53,17 @@ Next steps (recommended order):
 
 	Implementation (Phase A – priority):
 	1) Backend (MCP-first):
-	   - Add concise MCP `aggregate` pipelines for `total_rides` and `total_distance_km` against `ride_logs`.
-	   - Extend `get_tab_data` to include a compact `dashboard` object with the MCP results. Return JSON-friendly payloads (stringify IDs, no ObjectId).
-	   - Feature-flag a Python fallback for CI/dev environments without MCP.
+	   - [ ] Add concise MCP `aggregate` pipelines for `total_rides` and `total_distance_km` against `ride_logs`.
+	   - [ ] Extend `get_tab_data` to include a compact `dashboard` object with the MCP results. Return JSON-friendly payloads (stringify IDs, no ObjectId).
+	   - [ ] Feature-flag a Python fallback for CI/dev environments without MCP.
 
 	2) UI: dashboard shell and cards
-	   - Add a right-side dashboard panel (side-column) in `agent/app/ui/index.html` for KPI cards and a small sparkline.
-	   - Show graceful empty states; allow clicking a KPI to view a minimal details flyout (pipeline summary + sample records).
+	   - [ ] Add a right-side dashboard panel (side-column) in `agent/app/ui/index.html` for KPI cards and a small sparkline.
+	   - [ ] Show graceful empty states; allow clicking a KPI to view a minimal details flyout (pipeline summary + sample records).
 
 	3) Tests & demo readiness
-	   - Add an integration test asserting `/tab-data` includes `dashboard` with `total_rides` and `total_distance_km` keys.
-	   - Provide a tiny seeded dataset (dev-only) so demos are immediate.
+	   - [ ] Add an integration test asserting `/tab-data` includes `dashboard` with `total_rides` and `total_distance_km` keys.
+	   - [ ] Provide a tiny seeded dataset (dev-only) so demos are immediate.
 
 	UX & governance constraints:
 	- Keep all writes under Python helper tools and require explicit user confirmation for any write.
