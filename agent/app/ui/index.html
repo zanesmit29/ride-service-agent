@@ -1508,45 +1508,55 @@
         }
 
         function normalizeUrgency(reminder) {
-          const rawUrgency = typeof reminder.urgency === "string" ? reminder.urgency.toLowerCase() : "";
-          if (rawUrgency === "critical" || rawUrgency === "warning" || rawUrgency === "safe") {
-            return rawUrgency;
-          }
+          const dueKm = Number(reminder.due_km);
+          const kmUntil = Number(reminder.km_until_due);
+          const dueDate = parseDate(reminder.due_date);
+          const daysDelta = wholeDaysUntil(dueDate);
+          const daysUntil = Number(reminder.days_until_due);
 
           const overdueFlag = reminder.is_overdue === true || reminder.is_overdue === "true";
+          const soonFlag = reminder.is_due_soon === true || reminder.is_due_soon === "true";
+
+          // Critical must always win over warning/safe regardless of source field quality.
           if (overdueFlag) {
             return "critical";
           }
-
-          const soonFlag = reminder.is_due_soon === true || reminder.is_due_soon === "true";
-          if (soonFlag) {
-            return "warning";
-          }
-
-          const dueKm = Number(reminder.due_km);
           if (Number.isFinite(dueKm) && Number.isFinite(currentOdometer)) {
             const kmDelta = dueKm - currentOdometer;
             if (kmDelta < 0) return "critical";
-            if (kmDelta <= 1000) return "warning";
           }
-
-          const dueDate = parseDate(reminder.due_date);
-          const daysDelta = wholeDaysUntil(dueDate);
           if (Number.isFinite(daysDelta)) {
             if (daysDelta < 0) return "critical";
-            if (daysDelta <= 30) return "warning";
           }
-
-          const kmUntil = Number(reminder.km_until_due);
           if (Number.isFinite(kmUntil)) {
             if (kmUntil < 0) return "critical";
-            if (kmUntil <= 1000) return "warning";
           }
-
-          const daysUntil = Number(reminder.days_until_due);
           if (Number.isFinite(daysUntil)) {
             if (daysUntil < 0) return "critical";
+          }
+
+          // Warning checks run only after all overdue paths have failed.
+          if (soonFlag) {
+            return "warning";
+          }
+          if (Number.isFinite(dueKm) && Number.isFinite(currentOdometer)) {
+            const kmDelta = dueKm - currentOdometer;
+            if (kmDelta <= 1000) return "warning";
+          }
+          if (Number.isFinite(daysDelta)) {
+            if (daysDelta <= 30) return "warning";
+          }
+          if (Number.isFinite(kmUntil)) {
+            if (kmUntil <= 1000) return "warning";
+          }
+          if (Number.isFinite(daysUntil)) {
             if (daysUntil <= 30) return "warning";
+          }
+
+          // Raw backend urgency is used last as a fallback only.
+          const rawUrgency = typeof reminder.urgency === "string" ? reminder.urgency.toLowerCase() : "";
+          if (rawUrgency === "critical" || rawUrgency === "warning" || rawUrgency === "safe") {
+            return rawUrgency;
           }
 
           return "safe";
