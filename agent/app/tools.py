@@ -168,6 +168,91 @@ def _get_dashboard_totals_python(db) -> tuple[int | None, float | None] | None:
     return total_rides, total_distance_km
 
 
+def _coerce_date(value: object) -> datetime_date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, datetime_date):
+        return value
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        candidate = raw.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(candidate).date()
+        except Exception:
+            pass
+        try:
+            return datetime_date.fromisoformat(raw)
+        except Exception:
+            return None
+    return None
+
+
+def _enrich_open_reminders_for_watch(
+    open_reminders: list[dict[str, object]],
+    latest_odometer_end_km: int | None,
+) -> list[dict[str, object]]:
+    today = datetime_date.today()
+    enriched: list[dict[str, object]] = []
+
+    for reminder in open_reminders:
+        item = dict(reminder)
+        due_km = _coerce_int(item.get("due_km"))
+        due_date = _coerce_date(item.get("due_date"))
+
+        km_until_due = None
+        if due_km is not None and latest_odometer_end_km is not None:
+            km_until_due = due_km - latest_odometer_end_km
+
+        days_until_due = None
+        if due_date is not None:
+            days_until_due = (due_date - today).days
+
+        overdue_by_km = km_until_due is not None and km_until_due < 0
+        overdue_by_date = days_until_due is not None and days_until_due < 0
+        is_overdue = overdue_by_km or overdue_by_date
+
+        due_soon_by_km = km_until_due is not None and 0 <= km_until_due <= 1000
+        due_soon_by_date = days_until_due is not None and 0 <= days_until_due <= 30
+        is_due_soon = (not is_overdue) and (due_soon_by_km or due_soon_by_date)
+
+        urgency = "safe"
+        if is_overdue:
+            urgency = "critical"
+        elif is_due_soon:
+            urgency = "warning"
+
+        reasons: list[str] = []
+        if overdue_by_km and km_until_due is not None:
+            reasons.append(f"{abs(km_until_due)} km overdue")
+        elif due_soon_by_km and km_until_due is not None:
+            reasons.append(f"{km_until_due} km remaining")
+
+        if overdue_by_date and days_until_due is not None:
+            reasons.append(f"{abs(days_until_due)} days overdue")
+        elif due_soon_by_date and days_until_due is not None:
+            reasons.append(f"{days_until_due} days remaining")
+
+        if not reasons:
+            if due_km is not None:
+                reasons.append(f"Due at {due_km} km")
+            if due_date is not None:
+                reasons.append(f"Due by {due_date.isoformat()}")
+
+        item["km_until_due"] = km_until_due
+        item["days_until_due"] = days_until_due
+        item["is_overdue"] = is_overdue
+        item["is_due_soon"] = is_due_soon
+        item["urgency"] = urgency
+        item["watch_reason"] = " · ".join(reasons) if reasons else "On track"
+        enriched.append(item)
+
+    return enriched
+
+
 def _build_dashboard_tab_data(
     total_rides: int | None,
     total_distance_km: float | None,
@@ -482,6 +567,11 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
     if latest_ride_doc:
         latest_odometer_end_km = latest_ride_doc.get("odometer_end_km")
         last_ride_date = latest_ride_doc.get("date")
+
+    open_reminders = _enrich_open_reminders_for_watch(
+        open_reminders=open_reminders,
+        latest_odometer_end_km=_coerce_int(latest_odometer_end_km),
+    )
 
     next_service_highlight = None
     if open_reminders:

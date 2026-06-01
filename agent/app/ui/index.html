@@ -18,6 +18,9 @@
         --accent: #ff5533;
         --accent-2: #ff8f5c;
         --accent-glow: rgba(255, 85, 51, 0.22);
+        --status-critical: #ff5959;
+        --status-warning: #ffc857;
+        --status-safe: #41c28e;
         --line: rgba(255, 255, 255, 0.08);
         --shadow: 0 28px 70px rgba(0, 0, 0, 0.5);
         --radius-xl: 28px;
@@ -681,6 +684,104 @@
         background: rgba(255, 255, 255, 0.04);
       }
 
+      .service-watch {
+        margin-top: 12px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(255, 85, 51, 0.14), rgba(255, 255, 255, 0.03));
+        padding: 14px;
+      }
+
+      .service-watch-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .service-watch-head strong {
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+      }
+
+      .service-watch-summary {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .service-watch-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .service-watch-item {
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 10px 12px;
+        border-left-width: 4px;
+      }
+
+      .service-watch-item.critical {
+        border-left-color: var(--status-critical);
+      }
+
+      .service-watch-item.warning {
+        border-left-color: var(--status-warning);
+      }
+
+      .service-watch-item.safe {
+        border-left-color: var(--status-safe);
+      }
+
+      .service-watch-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .service-watch-top strong {
+        margin: 0;
+        font-size: 0.94rem;
+      }
+
+      .service-watch-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        padding: 4px 8px;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .service-watch-pill.critical {
+        color: #ffd6d6;
+        background: rgba(255, 89, 89, 0.2);
+        border-color: rgba(255, 89, 89, 0.42);
+      }
+
+      .service-watch-pill.warning {
+        color: #ffe5a3;
+        background: rgba(255, 200, 87, 0.2);
+        border-color: rgba(255, 200, 87, 0.42);
+      }
+
+      .service-watch-pill.safe {
+        color: #cdf5e2;
+        background: rgba(65, 194, 142, 0.18);
+        border-color: rgba(65, 194, 142, 0.42);
+      }
+
+      .service-watch-detail {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
       .dashboard-insights {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -775,6 +876,17 @@
         color: var(--muted);
         font-size: 0.85rem;
         line-height: 1.5;
+      }
+
+      .trend-svg {
+        display: block;
+        width: 100%;
+        height: 120px;
+        margin-top: 8px;
+      }
+
+      .trend-svg.spark {
+        height: 64px;
       }
 
       /* Spacing for profile preference rows and advanced section */
@@ -1174,6 +1286,20 @@
                 <button class="secondary tab-refresh" data-tab="dashboard">Refresh view</button>
               </div>
               <h4>Dashboard</h4>
+              <div id="serviceWatch" class="service-watch">
+                <div class="service-watch-head">
+                  <strong>Service Watch</strong>
+                  <span id="serviceWatchSummary" class="service-watch-summary">Scanning open reminders...</span>
+                </div>
+                <div id="serviceWatchList" class="service-watch-list">
+                  <div class="service-watch-item safe">
+                    <div class="service-watch-top">
+                      <strong>Loading service watch...</strong>
+                      <span class="service-watch-pill safe">On Track</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <p id="dashboardSummary">Fleet-wide summary from the backend contract.</p>
               <div class="dashboard-meta">
                 <span class="dashboard-badge">Fleet overview</span>
@@ -1194,11 +1320,15 @@
               <div class="dashboard-trends">
                 <div class="trend-card">
                   <strong>Ride distance trend</strong>
-                  <span id="dashboardDistanceTrend">Waiting for ride trend data.</span>
+                  <svg id="chartDistance" class="trend-svg" viewBox="0 0 320 120" preserveAspectRatio="none" role="img" aria-label="Ride distance trend"></svg>
                 </div>
                 <div class="trend-card">
-                  <strong>Ride cadence trend</strong>
-                  <span id="dashboardCadenceTrend">Waiting for cadence trend data.</span>
+                  <strong>Odometer progression</strong>
+                  <svg id="chartOdometer" class="trend-svg" viewBox="0 0 320 120" preserveAspectRatio="none" role="img" aria-label="Odometer progression"></svg>
+                </div>
+                <div class="trend-card">
+                  <strong>Recent rides (sparkline)</strong>
+                  <svg id="chartSparkline" class="trend-svg spark" viewBox="0 0 320 64" preserveAspectRatio="none" role="img" aria-label="Recent rides sparkline"></svg>
                 </div>
               </div>
             </section>
@@ -1279,8 +1409,11 @@
       const dashboardCadence = document.getElementById("dashboardCadence");
       const dashboardOdometer = document.getElementById("dashboardOdometer");
       const dashboardLatestRide = document.getElementById("dashboardLatestRide");
-      const dashboardDistanceTrend = document.getElementById("dashboardDistanceTrend");
-      const dashboardCadenceTrend = document.getElementById("dashboardCadenceTrend");
+      const serviceWatchSummary = document.getElementById("serviceWatchSummary");
+      const serviceWatchList = document.getElementById("serviceWatchList");
+      const chartDistanceEl = document.getElementById("chartDistance");
+      const chartOdometerEl = document.getElementById("chartOdometer");
+      const chartSparklineEl = document.getElementById("chartSparkline");
       const remindersSummary = document.getElementById("remindersSummary");
       const remindersList = document.getElementById("remindersList");
       const tripsSummary = document.getElementById("tripsSummary");
@@ -1334,13 +1467,181 @@
         vehicleService.textContent = "Unable to load service data.";
       }
 
+      function renderServiceWatch(openReminders, context = {}) {
+        if (!serviceWatchSummary || !serviceWatchList) {
+          return;
+        }
+
+        const reminders = Array.isArray(openReminders) ? openReminders : [];
+        const latestRide = context.latestRide || null;
+        const currentOdometer = Number.isFinite(Number(context.latestOdometer))
+          ? Number(context.latestOdometer)
+          : (latestRide && Number.isFinite(Number(latestRide.odometer_end_km))
+            ? Number(latestRide.odometer_end_km)
+            : null);
+        if (!reminders.length) {
+          serviceWatchSummary.textContent = "No immediate service risks.";
+          serviceWatchList.innerHTML = `
+            <div class="service-watch-item safe">
+              <div class="service-watch-top">
+                <strong>All clear</strong>
+                <span class="service-watch-pill safe">On Track</span>
+              </div>
+              <div class="service-watch-detail">No open reminders are currently due soon.</div>
+            </div>
+          `;
+          return;
+        }
+
+        function parseDate(value) {
+          if (!value) return null;
+          const d = new Date(value);
+          return Number.isNaN(d.getTime()) ? null : d;
+        }
+
+        function wholeDaysUntil(targetDate) {
+          if (!targetDate) return null;
+          const now = new Date();
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+          return Math.round((targetStart.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000));
+        }
+
+        function normalizeUrgency(reminder) {
+          const rawUrgency = typeof reminder.urgency === "string" ? reminder.urgency.toLowerCase() : "";
+          if (rawUrgency === "critical" || rawUrgency === "warning" || rawUrgency === "safe") {
+            return rawUrgency;
+          }
+
+          const overdueFlag = reminder.is_overdue === true || reminder.is_overdue === "true";
+          if (overdueFlag) {
+            return "critical";
+          }
+
+          const soonFlag = reminder.is_due_soon === true || reminder.is_due_soon === "true";
+          if (soonFlag) {
+            return "warning";
+          }
+
+          const dueKm = Number(reminder.due_km);
+          if (Number.isFinite(dueKm) && Number.isFinite(currentOdometer)) {
+            const kmDelta = dueKm - currentOdometer;
+            if (kmDelta < 0) return "critical";
+            if (kmDelta <= 1000) return "warning";
+          }
+
+          const dueDate = parseDate(reminder.due_date);
+          const daysDelta = wholeDaysUntil(dueDate);
+          if (Number.isFinite(daysDelta)) {
+            if (daysDelta < 0) return "critical";
+            if (daysDelta <= 30) return "warning";
+          }
+
+          const kmUntil = Number(reminder.km_until_due);
+          if (Number.isFinite(kmUntil)) {
+            if (kmUntil < 0) return "critical";
+            if (kmUntil <= 1000) return "warning";
+          }
+
+          const daysUntil = Number(reminder.days_until_due);
+          if (Number.isFinite(daysUntil)) {
+            if (daysUntil < 0) return "critical";
+            if (daysUntil <= 30) return "warning";
+          }
+
+          return "safe";
+        }
+
+        const severity = { critical: 0, warning: 1, safe: 2 };
+        const normalized = reminders.map((reminder) => ({
+          ...reminder,
+          _uiUrgency: normalizeUrgency(reminder),
+        }));
+
+        const sorted = normalized.sort((a, b) => {
+          const aLevel = severity[String(a._uiUrgency || "safe")] ?? 2;
+          const bLevel = severity[String(b._uiUrgency || "safe")] ?? 2;
+          return aLevel - bLevel;
+        });
+
+        const criticalCount = sorted.filter((r) => String(r._uiUrgency) === "critical").length;
+        const warningCount = sorted.filter((r) => String(r._uiUrgency) === "warning").length;
+        serviceWatchSummary.textContent = `${criticalCount} overdue · ${warningCount} due soon`;
+
+        const urgencyLabel = {
+          critical: "Overdue",
+          warning: "Due Soon",
+          safe: "On Track",
+        };
+
+        serviceWatchList.innerHTML = "";
+        sorted.slice(0, 6).forEach((reminder) => {
+          const urgency = String(reminder._uiUrgency || "safe");
+          const serviceType = String(reminder.service_type || "Service");
+          const detailParts = [];
+          if (reminder.due_km !== null && reminder.due_km !== undefined) {
+            detailParts.push(`Due at ${reminder.due_km} km`);
+          }
+          if (reminder.due_date) {
+            detailParts.push(`by ${formatDate(reminder.due_date)}`);
+          }
+          const dueSummary = detailParts.join(" · ") || "Due details unavailable";
+          let reason = reminder.watch_reason ? String(reminder.watch_reason) : "";
+          if (!reason || reason === dueSummary) {
+            const dueKm = Number(reminder.due_km);
+            const dueDate = parseDate(reminder.due_date);
+            const reasonParts = [];
+            if (Number.isFinite(dueKm) && Number.isFinite(currentOdometer)) {
+              const kmDelta = dueKm - currentOdometer;
+              reasonParts.push(kmDelta < 0 ? `${Math.abs(kmDelta)} km overdue` : `${kmDelta} km remaining`);
+            }
+            const daysDelta = wholeDaysUntil(dueDate);
+            if (Number.isFinite(daysDelta)) {
+              reasonParts.push(daysDelta < 0 ? `${Math.abs(daysDelta)} days overdue` : `${daysDelta} days remaining`);
+            }
+            reason = reasonParts.join(" · ") || dueSummary;
+          }
+
+          const item = document.createElement("div");
+          item.className = `service-watch-item ${urgency}`;
+          const top = document.createElement("div");
+          top.className = "service-watch-top";
+
+          const title = document.createElement("strong");
+          title.textContent = serviceType;
+
+          const pill = document.createElement("span");
+          pill.className = `service-watch-pill ${urgency}`;
+          pill.textContent = urgencyLabel[urgency] || "On Track";
+
+          const dueLine = document.createElement("div");
+          dueLine.className = "service-watch-detail";
+          dueLine.textContent = dueSummary;
+
+          const reasonLine = document.createElement("div");
+          reasonLine.className = "service-watch-detail";
+          reasonLine.textContent = reason;
+
+          top.appendChild(title);
+          top.appendChild(pill);
+          item.appendChild(top);
+          item.appendChild(dueLine);
+          item.appendChild(reasonLine);
+          serviceWatchList.appendChild(item);
+        });
+      }
+
       function renderDashboardData(dashboard, context = {}) {
-        if (!dashboardSummary || !dashboardState || !dashboardRides || !dashboardDistance || !dashboardCadence || !dashboardOdometer || !dashboardLatestRide || !dashboardDistanceTrend || !dashboardCadenceTrend) {
+        if (!dashboardSummary || !dashboardState || !dashboardRides || !dashboardDistance || !dashboardCadence || !dashboardOdometer || !dashboardLatestRide) {
           return;
         }
 
         const recentRides = Array.isArray(context.recentRides) ? context.recentRides : [];
         const openReminders = Array.isArray(context.openReminders) ? context.openReminders : [];
+        renderServiceWatch(openReminders, {
+          latestRide: recentRides[0] || null,
+          latestOdometer: context.latestOdometer,
+        });
 
         if (!dashboard || typeof dashboard !== "object") {
           dashboardSummary.textContent = "Dashboard summary is not available yet.";
@@ -1350,8 +1651,7 @@
           dashboardCadence.textContent = "No recent ride data.";
           dashboardOdometer.textContent = "-- km";
           dashboardLatestRide.textContent = "No latest ride data.";
-          dashboardDistanceTrend.textContent = "No trend data.";
-          dashboardCadenceTrend.textContent = "No trend data.";
+          // charts are not shown when dashboard is unavailable
           return;
         }
 
@@ -1400,11 +1700,100 @@
         const newerDistance = sumDistance(newerHalf);
         const olderDistance = sumDistance(olderHalf);
         const distanceDelta = olderDistance > 0 ? ((newerDistance - olderDistance) / olderDistance) * 100 : null;
-        dashboardDistanceTrend.textContent = trendRides.length
-          ? olderHalf.length
-            ? `${newerHalf.length} recent rides covered ${newerDistance.toFixed(1)} km, compared with ${olderDistance.toFixed(1)} km in the older set${distanceDelta === null ? "" : ` (${distanceDelta >= 0 ? "+" : ""}${distanceDelta.toFixed(0)}%)`}.`
-            : `${newerHalf.length} recent rides covered ${newerDistance.toFixed(1)} km in the latest snapshot.`
-          : "No distance trend data yet.";
+
+        // Draw fixed-size SVG trends (no dynamic chart library resizing).
+        function renderSvgTrend(svgEl, values, strokeColor, fillColor) {
+          if (!svgEl) {
+            return;
+          }
+          const numericValues = values.filter((v) => Number.isFinite(v));
+          if (numericValues.length < 2) {
+            svgEl.innerHTML = "<text x='8' y='22' fill='rgba(168,160,160,0.9)' font-size='12'>Not enough data</text>";
+            return;
+          }
+
+          const isSpark = svgEl.id === "chartSparkline";
+          const width = 320;
+          const height = isSpark ? 64 : 120;
+          const leftPad = isSpark ? 8 : 36;
+          const rightPad = 8;
+          const topPad = 8;
+          const bottomPad = isSpark ? 8 : 18;
+          const min = Math.min(...numericValues);
+          const max = Math.max(...numericValues);
+          const range = max - min || 1;
+
+          const innerWidth = width - leftPad - rightPad;
+          const innerHeight = height - topPad - bottomPad;
+
+          const formatValue = (v) => {
+            if (!Number.isFinite(v)) return "-";
+            if (Math.abs(v) >= 1000) return Math.round(v).toLocaleString();
+            return v.toFixed(1).replace(/\.0$/, "");
+          };
+
+          const points = values.map((value, index) => {
+            const safeValue = Number.isFinite(value) ? value : min;
+            const x = leftPad + (index * innerWidth) / Math.max(values.length - 1, 1);
+            const y = height - bottomPad - ((safeValue - min) / range) * innerHeight;
+            return { x, y, value: safeValue, index };
+          });
+
+          const pointsText = points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
+
+          const baseline = `${(width - rightPad).toFixed(2)},${(height - bottomPad).toFixed(2)} ${leftPad.toFixed(2)},${(height - bottomPad).toFixed(2)}`;
+          const areaPoints = `${pointsText} ${baseline}`;
+
+          let axesMarkup = "";
+          if (!isSpark) {
+            const ticks = [max, min + range / 2, min];
+            axesMarkup = ticks
+              .map((tickVal) => {
+                const y = height - bottomPad - ((tickVal - min) / range) * innerHeight;
+                return `
+                  <line x1="${leftPad}" y1="${y.toFixed(2)}" x2="${width - rightPad}" y2="${y.toFixed(2)}" stroke="rgba(255,255,255,0.08)" stroke-width="1"></line>
+                  <text x="${leftPad - 4}" y="${(y + 4).toFixed(2)}" fill="rgba(168,160,160,0.95)" font-size="10" text-anchor="end">${formatValue(tickVal)}</text>
+                `;
+              })
+              .join("");
+          }
+
+          const maxIndex = points.reduce((best, p, idx, arr) => (p.value > arr[best].value ? idx : best), 0);
+          const labelIndexes = new Set([0, points.length - 1, maxIndex]);
+          const pointMarkup = points
+            .filter((p) => labelIndexes.has(p.index))
+            .map((p) => {
+              const anchor = p.index === points.length - 1 ? "end" : "start";
+              const labelX = p.index === points.length - 1 ? p.x - 4 : p.x + 4;
+              const labelY = Math.max(12, p.y - 6);
+              const showDot = !isSpark || p.index === points.length - 1;
+              return `
+                ${showDot ? `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="2.6" fill="${strokeColor}"></circle>` : ""}
+                <text x="${labelX.toFixed(2)}" y="${labelY.toFixed(2)}" fill="rgba(245,239,233,0.92)" font-size="10" text-anchor="${anchor}">${formatValue(p.value)}</text>
+              `;
+            })
+            .join("");
+
+          svgEl.setAttribute("viewBox", `0 0 ${width} ${height}`);
+          svgEl.innerHTML = `
+            <rect x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+            ${axesMarkup}
+            <polygon points="${areaPoints}" fill="${fillColor}" opacity="0.7"></polygon>
+            <polyline points="${pointsText}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            ${pointMarkup}
+          `;
+        }
+
+        const sortedTrendRides = [...trendRides].reverse();
+        const distanceSeries = sortedTrendRides.map((r) => Number(r.distance_km) || 0);
+        const odometerSeries = sortedTrendRides
+          .map((r) => (r.odometer_end_km != null ? Number(r.odometer_end_km) : null))
+          .filter((v) => Number.isFinite(v));
+        const sparkSeries = distanceSeries.slice(-12);
+
+        renderSvgTrend(chartDistanceEl, distanceSeries, "#ff8f5c", "rgba(255,143,92,0.18)");
+        renderSvgTrend(chartOdometerEl, odometerSeries, "#4d8cff", "rgba(77,140,255,0.18)");
+        renderSvgTrend(chartSparklineEl, sparkSeries, "#ff5533", "rgba(255,85,51,0.18)");
 
         const sevenDayMs = 7 * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -1417,7 +1806,8 @@
           return Number.isFinite(rideDate) && now - rideDate > sevenDayMs && now - rideDate <= 2 * sevenDayMs;
         }).length;
         const cadenceDelta = previous7Days > 0 ? ((recent7Days - previous7Days) / previous7Days) * 100 : null;
-        dashboardCadenceTrend.textContent = recentRides.length
+        // cadence summary text remains in the cadence card
+        dashboardCadence.textContent = recentRides.length
           ? previous7Days
             ? `${recent7Days} rides in the last 7 days vs ${previous7Days} in the prior 7 days${cadenceDelta === null ? "" : ` (${cadenceDelta >= 0 ? "+" : ""}${cadenceDelta.toFixed(0)}%)`}.`
             : `${recent7Days} rides in the last 7 days.`
