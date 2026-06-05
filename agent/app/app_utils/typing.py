@@ -71,6 +71,7 @@ class TripsTabData(BaseModel):
     state: Literal["loading", "ready", "empty", "error"] = "ready"
     recent_rides: list[dict[str, object]] = Field(default_factory=list)
     totals: dict[str, object] = Field(default_factory=dict)
+    historical_analysis: dict[str, object] = Field(default_factory=dict)
     weather_summary: str | None = None
     message: str | None = None
 

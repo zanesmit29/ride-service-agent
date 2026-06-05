@@ -202,6 +202,26 @@ def test_tab_data_contract(server_fixture: subprocess.Popen[str]) -> None:
     for key in ("vehicle", "reminders", "trips", "profile"):
         assert payload[key]["state"] in {"loading", "ready", "empty", "error"}
 
+    trips = payload["trips"]
+    assert "recent_rides" in trips
+    assert "totals" in trips
+    assert "historical_analysis" in trips
+    assert isinstance(trips["historical_analysis"], dict)
+
+    historical = trips["historical_analysis"]
+    for key in (
+        "ride_count",
+        "distance_km",
+        "fuel_liters",
+        "average_speed_kmh",
+        "average_distance_km",
+        "fuel_efficiency_kmpl",
+        "route_type_breakdown",
+        "weather_breakdown",
+        "source",
+    ):
+        assert key in historical
+
     # dashboard may be None (null) or an object
     dashboard = payload.get("dashboard")
     if dashboard is None:

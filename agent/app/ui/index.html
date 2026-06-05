@@ -907,6 +907,46 @@
         margin-top: 8px;
       }
 
+      .trips-controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 12px 0;
+      }
+
+      .trip-filter {
+        display: grid;
+        gap: 6px;
+      }
+
+      .trip-filter span {
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .trip-detail {
+        margin-top: 8px;
+      }
+
+      .trip-detail summary {
+        cursor: pointer;
+        color: var(--accent-2);
+        font-size: 0.84rem;
+      }
+
+      .trip-detail-grid {
+        display: grid;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .trip-detail-grid span {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
       .stat strong,
       .chip strong,
       .list-item strong,
@@ -1185,7 +1225,7 @@
             <h1>Swift control for every ride.</h1>
             <p class="landing-lead">
               A quick overview of the app before you enter the cockpit. Start with Copilot for live ride help, then use the
-              tabs to check vehicle status, dashboard service watch, review trips, and view your profile.
+              tabs to check dashboard service watch, review historical trips, and view your profile.
             </p>
             <div class="hero-actions">
               <button id="getStartedBtn" class="primary">Get started</button>
@@ -1196,12 +1236,8 @@
                 <span>Ask route questions, get ride advice, and keep the chat focused on the trip you want to make.</span>
               </div>
               <div class="note">
-                <strong>Vehicle</strong>
-                <span>Check ride status at a glance, including the latest odometer reading and service highlight.</span>
-              </div>
-              <div class="note">
                 <strong>Trips</strong>
-                <span>Review recent ride history, totals, and weather patterns to help plan the next run.</span>
+                <span>Explore ride history, compare conditions, and drill into each trip before planning your next run.</span>
               </div>
               <div class="note">
                 <strong>Profile</strong>
@@ -1210,7 +1246,6 @@
             </div>
             <div class="landing-footer">
               <span>Copilot</span>
-              <span>Vehicle</span>
               <span>Trips</span>
               <span>Profile</span>
             </div>
@@ -1255,7 +1290,6 @@
         <nav class="tabs" aria-label="App sections">
           <button class="tab active" data-tab="copilot">Copilot</button>
           <button class="tab" data-tab="dashboard">Dashboard</button>
-          <button class="tab" data-tab="vehicle">Vehicle</button>
           <button class="tab" data-tab="trips">Trips</button>
           <button class="tab" data-tab="profile">Profile</button>
         </nav>
@@ -1327,27 +1361,50 @@
               </div>
             </section>
 
-            <section id="vehicle" class="tab-panel panel">
-              <div class="refresh-bar">
-                <button class="secondary tab-refresh" data-tab="vehicle">Refresh view</button>
-              </div>
-              <h4>Vehicle status</h4>
-              <p id="vehicleSummary">Latest ride context rendered as a sporty dashboard panel.</p>
-              <div class="stat-grid">
-                <div class="stat"><strong>Odometer</strong><span id="vehicleOdometer">Loading vehicle data...</span></div>
-                <div class="stat"><strong>Service</strong><span id="vehicleService">Loading vehicle data...</span></div>
-              </div>
-            </section>
-
             <section id="trips" class="tab-panel panel">
               <div class="refresh-bar">
                 <button class="secondary tab-refresh" data-tab="trips">Refresh view</button>
               </div>
-              <h4>Trips</h4>
-              <p id="tripsSummary">Recent ride history and weather summary, designed for future wiring.</p>
+              <h4>Trip history</h4>
+              <p id="tripsSummary">Historical ride analysis with filterable drill-down rows.</p>
+              <div class="trips-controls">
+                <label class="trip-filter">
+                  <span>Window</span>
+                  <select id="tripsWindow">
+                    <option value="all">All rides</option>
+                    <option value="30">Last 30 days</option>
+                    <option value="90" selected>Last 90 days</option>
+                    <option value="180">Last 180 days</option>
+                  </select>
+                </label>
+                <label class="trip-filter">
+                  <span>Route</span>
+                  <select id="tripsRouteFilter">
+                    <option value="all">All routes</option>
+                  </select>
+                </label>
+                <label class="trip-filter">
+                  <span>Weather</span>
+                  <select id="tripsWeatherFilter">
+                    <option value="all">All weather</option>
+                  </select>
+                </label>
+                <label class="trip-filter">
+                  <span>Sort</span>
+                  <select id="tripsSort">
+                    <option value="newest" selected>Newest first</option>
+                    <option value="distance">Longest distance</option>
+                  </select>
+                </label>
+              </div>
               <div class="chip-grid">
-                <div class="chip"><strong>Ride totals</strong><span id="tripsTotals">Loading trip totals...</span></div>
+                <div class="chip"><strong>Window totals</strong><span id="tripsTotals">Loading trip totals...</span></div>
                 <div class="chip"><strong>Weather pattern</strong><span id="tripsWeather">Loading trip weather...</span></div>
+                <div class="chip"><strong>Route mix</strong><span id="tripsRouteMix">Loading route mix...</span></div>
+                <div class="chip"><strong>Fuel efficiency</strong><span id="tripsEfficiency">Loading efficiency...</span></div>
+              </div>
+              <div id="tripsHistory" class="list-grid">
+                <div class="list-item"><strong>Loading rides...</strong><span>Please wait.</span></div>
               </div>
             </section>
 
@@ -1382,9 +1439,6 @@
       const userIdInput = document.getElementById("userId");
       const tabButtons = Array.from(document.querySelectorAll(".tab"));
       const refreshButtons = Array.from(document.querySelectorAll(".tab-refresh"));
-      const vehicleSummary = document.getElementById("vehicleSummary");
-      const vehicleOdometer = document.getElementById("vehicleOdometer");
-      const vehicleService = document.getElementById("vehicleService");
       const dashboardSummary = document.getElementById("dashboardSummary");
       const dashboardState = document.getElementById("dashboardState");
       const dashboardRides = document.getElementById("dashboardRides");
@@ -1400,6 +1454,13 @@
       const tripsSummary = document.getElementById("tripsSummary");
       const tripsTotals = document.getElementById("tripsTotals");
       const tripsWeather = document.getElementById("tripsWeather");
+      const tripsRouteMix = document.getElementById("tripsRouteMix");
+      const tripsEfficiency = document.getElementById("tripsEfficiency");
+      const tripsHistory = document.getElementById("tripsHistory");
+      const tripsWindow = document.getElementById("tripsWindow");
+      const tripsRouteFilter = document.getElementById("tripsRouteFilter");
+      const tripsWeatherFilter = document.getElementById("tripsWeatherFilter");
+      const tripsSort = document.getElementById("tripsSort");
       const profileSummary = document.getElementById("profileSummary");
       const profileRows = document.getElementById("profileRows");
 
@@ -1408,7 +1469,8 @@
       let isStreaming = false;
       let buffer = "";
       const refreshTimers = new Map();
-      let vehicleDataLoaded = false;
+      let tabDataLoaded = false;
+      let tripsRawRides = [];
 
       function formatDate(value) {
         if (!value) {
@@ -1419,33 +1481,6 @@
           return String(value);
         }
         return parsed.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
-      }
-
-      function renderVehicleData(vehicle) {
-        if (!vehicleSummary || !vehicleOdometer || !vehicleService) {
-          return;
-        }
-
-        const summary = vehicle.message || "Live vehicle data loaded from the backend contract.";
-        const odometerValue = vehicle.latest_odometer_end_km;
-        const rideDate = vehicle.last_ride_date ? formatDate(vehicle.last_ride_date) : "unknown date";
-
-        vehicleSummary.textContent = summary;
-        vehicleOdometer.textContent = odometerValue !== null && odometerValue !== undefined
-          ? `${odometerValue} km · last ride ${rideDate}`
-          : "No ride history found yet.";
-        vehicleService.textContent = vehicle.next_service_highlight || "No service highlight available yet.";
-        vehicleDataLoaded = true;
-      }
-
-      function renderVehicleError(message) {
-        if (!vehicleSummary || !vehicleOdometer || !vehicleService) {
-          return;
-        }
-
-        vehicleSummary.textContent = `Vehicle data unavailable: ${message}`;
-        vehicleOdometer.textContent = "Unable to load odometer data.";
-        vehicleService.textContent = "Unable to load service data.";
       }
 
       function renderServiceWatch(openReminders, context = {}) {
@@ -1619,6 +1654,134 @@
           item.appendChild(dueLine);
           item.appendChild(reasonLine);
           serviceWatchList.appendChild(item);
+        });
+      }
+
+      function parseRideDate(value) {
+        const parsed = Date.parse(value || "");
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function formatDecimal(value, digits = 1) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toFixed(digits).replace(/\.0$/, "") : "N/A";
+      }
+
+      function buildFilterOptions(selectEl, values) {
+        if (!selectEl) {
+          return;
+        }
+        const keepValue = selectEl.value || "all";
+        const uniqueValues = Array.from(new Set(values.filter(Boolean))).sort();
+        selectEl.innerHTML = `<option value="all">All ${selectEl === tripsRouteFilter ? "routes" : "weather"}</option>`;
+        uniqueValues.forEach((value) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          selectEl.appendChild(option);
+        });
+        if (uniqueValues.includes(keepValue) || keepValue === "all") {
+          selectEl.value = keepValue;
+        }
+      }
+
+      function getFilteredTrips() {
+        const windowDays = Number(tripsWindow?.value || "0");
+        const routeValue = tripsRouteFilter?.value || "all";
+        const weatherValue = tripsWeatherFilter?.value || "all";
+        const sortValue = tripsSort?.value || "newest";
+
+        const now = Date.now();
+        const cutoff = Number.isFinite(windowDays) && windowDays > 0
+          ? now - (windowDays * 24 * 60 * 60 * 1000)
+          : null;
+
+        const filtered = tripsRawRides.filter((ride) => {
+          const rideDate = parseRideDate(ride.date);
+          if (cutoff !== null && rideDate !== null && rideDate < cutoff) {
+            return false;
+          }
+          if (routeValue !== "all" && String(ride.route_type || "unknown") !== routeValue) {
+            return false;
+          }
+          if (weatherValue !== "all" && String(ride.weather || "unknown") !== weatherValue) {
+            return false;
+          }
+          return true;
+        });
+
+        filtered.sort((a, b) => {
+          if (sortValue === "distance") {
+            return (Number(b.distance_km) || 0) - (Number(a.distance_km) || 0);
+          }
+          return (parseRideDate(b.date) || 0) - (parseRideDate(a.date) || 0);
+        });
+
+        return filtered;
+      }
+
+      function renderTripsHistoryRows(filteredRides) {
+        if (!tripsHistory) {
+          return;
+        }
+
+        tripsHistory.innerHTML = "";
+        if (!filteredRides.length) {
+          const empty = document.createElement("div");
+          empty.className = "list-item";
+          empty.innerHTML = "<strong>No rides match this filter</strong><span>Try a wider window or reset route/weather filters.</span>";
+          tripsHistory.appendChild(empty);
+          return;
+        }
+
+        filteredRides.forEach((ride) => {
+          const item = document.createElement("div");
+          item.className = "list-item";
+
+          const title = document.createElement("strong");
+          title.textContent = `${formatDate(ride.date)} · ${Number(ride.distance_km) || 0} km`;
+
+          const headline = document.createElement("span");
+          const route = String(ride.route_type || "unknown");
+          const weather = String(ride.weather || "unknown");
+          const odometer = ride.odometer_end_km !== null && ride.odometer_end_km !== undefined
+            ? `${ride.odometer_end_km} km odometer`
+            : "odometer unknown";
+          headline.textContent = `${route} · ${weather} · ${odometer}`;
+
+          const detail = document.createElement("details");
+          detail.className = "trip-detail";
+          const summary = document.createElement("summary");
+          summary.textContent = "View drill-down";
+
+          const detailGrid = document.createElement("div");
+          detailGrid.className = "trip-detail-grid";
+
+          const avgSpeed = Number(ride.avg_speed_kmh);
+          const fuel = Number(ride.fuel_used_liters);
+          const distance = Number(ride.distance_km);
+          const efficiency = Number.isFinite(fuel) && fuel > 0 && Number.isFinite(distance)
+            ? `${formatDecimal(distance / fuel, 1)} km/L`
+            : "N/A";
+
+          const detailLines = [
+            `Average speed: ${Number.isFinite(avgSpeed) ? `${avgSpeed} km/h` : "N/A"}`,
+            `Fuel used: ${Number.isFinite(fuel) ? `${formatDecimal(fuel, 2)} L` : "N/A"}`,
+            `Efficiency: ${efficiency}`,
+            `Notes: ${ride.notes ? String(ride.notes) : "No notes"}`,
+          ];
+          detailLines.forEach((line) => {
+            const row = document.createElement("span");
+            row.textContent = line;
+            detailGrid.appendChild(row);
+          });
+
+          detail.appendChild(summary);
+          detail.appendChild(detailGrid);
+          item.appendChild(title);
+          item.appendChild(headline);
+          item.appendChild(detail);
+          tripsHistory.appendChild(item);
         });
       }
 
@@ -1806,19 +1969,40 @@
       }
 
       function renderTripsData(trips) {
-        if (!tripsSummary || !tripsTotals || !tripsWeather) {
+        if (!tripsSummary || !tripsTotals || !tripsWeather || !tripsRouteMix || !tripsEfficiency) {
           return;
         }
 
         const recentRides = Array.isArray(trips.recent_rides) ? trips.recent_rides : [];
         const totals = trips.totals || {};
+        const historical = trips.historical_analysis || {};
         const rideCount = totals.ride_count ?? recentRides.length;
         const distanceKm = totals.distance_km ?? 0;
         const fuelLiters = totals.fuel_liters ?? 0;
+        const routeBreakdown = historical.route_type_breakdown || {};
 
-        tripsSummary.textContent = trips.message || "Recent rides and weather context loaded from the backend contract.";
+        tripsRawRides = recentRides;
+        buildFilterOptions(tripsRouteFilter, recentRides.map((ride) => String(ride.route_type || "unknown")));
+        buildFilterOptions(tripsWeatherFilter, recentRides.map((ride) => String(ride.weather || "unknown")));
+
+        tripsSummary.textContent = trips.message || "Historical rides loaded. Filter the timeline and drill into each row.";
         tripsTotals.textContent = `${rideCount} rides · ${distanceKm} km total · ${fuelLiters} L fuel`;
         tripsWeather.textContent = trips.weather_summary || "No recent weather summary available yet.";
+
+        const routeEntries = Object.entries(routeBreakdown)
+          .filter(([, count]) => Number(count) > 0)
+          .sort((a, b) => Number(b[1]) - Number(a[1]));
+        tripsRouteMix.textContent = routeEntries.length
+          ? routeEntries.slice(0, 3).map(([name, count]) => `${name} (${count})`).join(" · ")
+          : "Route mix unavailable.";
+
+        const efficiency = Number(historical.fuel_efficiency_kmpl);
+        const avgSpeed = Number(historical.average_speed_kmh);
+        tripsEfficiency.textContent = Number.isFinite(efficiency)
+          ? `${formatDecimal(efficiency, 1)} km/L · avg ${Number.isFinite(avgSpeed) ? `${formatDecimal(avgSpeed, 1)} km/h` : "speed N/A"}`
+          : "Efficiency unavailable.";
+
+        renderTripsHistoryRows(getFilteredTrips());
       }
 
       function formatPreferenceValue(value) {
@@ -1987,10 +2171,11 @@
         renderDashboardData(data.dashboard || {}, {
           recentRides: Array.isArray(data.trips?.recent_rides) ? data.trips.recent_rides : [],
           openReminders: Array.isArray(data.reminders?.open_reminders) ? data.reminders.open_reminders : [],
+          latestOdometer: data.vehicle?.latest_odometer_end_km,
         });
-        renderVehicleData(data.vehicle || {});
         renderTripsData(data.trips || {});
         renderProfileData(data.profile || {});
+        tabDataLoaded = true;
         return data;
       }
 
@@ -2002,8 +2187,8 @@
         app.classList.remove("hidden");
         setTimeout(() => promptInput.focus(), 180);
         history.replaceState({}, "", "#app");
-        if (!vehicleDataLoaded) {
-          void refreshPanel("vehicle");
+        if (!tabDataLoaded) {
+          void refreshPanel("dashboard");
         }
       }
 
@@ -2271,15 +2456,27 @@
           statusLine.textContent = `Refreshing ${heading.textContent.toLowerCase()}...`;
         }
 
-        if (tabName === "vehicle" || tabName === "trips" || tabName === "profile") {
+        if (tabName === "dashboard" || tabName === "trips" || tabName === "profile") {
           try {
             await loadTabData();
           } catch (error) {
-            renderVehicleError(error.message);
+            if (dashboardSummary && dashboardState && dashboardRides && dashboardDistance) {
+              dashboardSummary.textContent = `Dashboard unavailable: ${error.message}`;
+              dashboardState.textContent = "Error";
+              dashboardRides.textContent = "Unavailable";
+              dashboardDistance.textContent = "Unavailable";
+            }
             if (tripsSummary && tripsTotals && tripsWeather) {
               tripsSummary.textContent = `Trips unavailable: ${error.message}`;
               tripsTotals.textContent = "Unable to load trip totals.";
               tripsWeather.textContent = "Unable to load trip weather.";
+              if (tripsRouteMix && tripsEfficiency) {
+                tripsRouteMix.textContent = "Route mix unavailable.";
+                tripsEfficiency.textContent = "Efficiency unavailable.";
+              }
+              if (tripsHistory) {
+                tripsHistory.innerHTML = "<div class=\"list-item\"><strong>Unable to load ride history</strong><span>Try refreshing again.</span></div>";
+              }
             }
             if (profileSummary && profileRows) {
               profileSummary.textContent = `Profile unavailable: ${error.message}`;
@@ -2316,16 +2513,19 @@
       });
       userIdInput.addEventListener("change", () => {
         sessionId = null;
-        vehicleDataLoaded = false;
-        if (vehicleSummary && vehicleOdometer && vehicleService) {
-          vehicleSummary.textContent = "Latest ride context rendered as a sporty dashboard panel.";
-          vehicleOdometer.textContent = "Loading vehicle data...";
-          vehicleService.textContent = "Loading vehicle data...";
-        }
+        tabDataLoaded = false;
+        tripsRawRides = [];
         if (tripsSummary && tripsTotals && tripsWeather) {
-          tripsSummary.textContent = "Recent ride history and weather summary, designed for future wiring.";
+          tripsSummary.textContent = "Historical ride analysis with filterable drill-down rows.";
           tripsTotals.textContent = "Loading trip totals...";
           tripsWeather.textContent = "Loading trip weather...";
+          if (tripsRouteMix && tripsEfficiency) {
+            tripsRouteMix.textContent = "Loading route mix...";
+            tripsEfficiency.textContent = "Loading efficiency...";
+          }
+          if (tripsHistory) {
+            tripsHistory.innerHTML = "<div class=\"list-item\"><strong>Loading rides...</strong><span>Please wait.</span></div>";
+          }
         }
         if (profileSummary && profileRows) {
           profileSummary.textContent = "Read-only rider preferences in a compact, demo-friendly panel.";
@@ -2343,6 +2543,11 @@
       refreshButtons.forEach((button) => {
         button.addEventListener("click", () => refreshPanel(button.dataset.tab));
       });
+      [tripsWindow, tripsRouteFilter, tripsWeatherFilter, tripsSort]
+        .filter(Boolean)
+        .forEach((control) => {
+          control.addEventListener("change", () => renderTripsHistoryRows(getFilteredTrips()));
+        });
 
       if (location.hash === "#app") {
         showApp();

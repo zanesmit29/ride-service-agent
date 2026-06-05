@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+from collections import Counter
 from pymongo import DESCENDING, MongoClient
 from datetime import datetime, timezone, date as datetime_date, timedelta
 import requests
@@ -189,6 +190,199 @@ def _coerce_date(value: object) -> datetime_date | None:
         except Exception:
             return None
     return None
+
+
+def _build_trips_analysis_from_rides(recent_rides: list[dict[str, object]]) -> dict[str, object]:
+    if not recent_rides:
+        return {
+            "ride_count": 0,
+            "distance_km": 0.0,
+            "fuel_liters": 0.0,
+            "average_speed_kmh": None,
+            "average_distance_km": None,
+            "fuel_efficiency_kmpl": None,
+            "route_type_breakdown": {},
+            "weather_breakdown": {},
+            "source": "recent_rides",
+        }
+
+    route_counter: Counter[str] = Counter()
+    weather_counter: Counter[str] = Counter()
+    distance_values: list[float] = []
+    speed_values: list[float] = []
+    total_distance = 0.0
+    total_fuel = 0.0
+
+    for ride in recent_rides:
+        distance_km = _coerce_float(ride.get("distance_km"))
+        fuel_liters = _coerce_float(ride.get("fuel_used_liters"))
+        avg_speed_kmh = _coerce_float(ride.get("avg_speed_kmh"))
+        route_type = str(ride.get("route_type") or "unknown")
+        weather = str(ride.get("weather") or "unknown")
+
+        route_counter[route_type] += 1
+        weather_counter[weather] += 1
+
+        if distance_km is not None:
+            total_distance += distance_km
+            distance_values.append(distance_km)
+        if fuel_liters is not None:
+            total_fuel += fuel_liters
+        if avg_speed_kmh is not None:
+            speed_values.append(avg_speed_kmh)
+
+    average_distance = (sum(distance_values) / len(distance_values)) if distance_values else None
+    average_speed = (sum(speed_values) / len(speed_values)) if speed_values else None
+    fuel_efficiency = (total_distance / total_fuel) if total_fuel > 0 else None
+
+    return {
+        "ride_count": len(recent_rides),
+        "distance_km": total_distance,
+        "fuel_liters": total_fuel,
+        "average_speed_kmh": average_speed,
+        "average_distance_km": average_distance,
+        "fuel_efficiency_kmpl": fuel_efficiency,
+        "route_type_breakdown": dict(route_counter),
+        "weather_breakdown": dict(weather_counter),
+        "source": "recent_rides",
+    }
+
+
+def _get_trips_aggregates_mcp() -> dict[str, object] | None:
+    summary_pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "ride_count": {"$sum": 1},
+                "distance_km": {"$sum": {"$ifNull": ["$distance_km", 0]}},
+                "fuel_liters": {"$sum": {"$ifNull": ["$fuel_used_liters", 0]}},
+                "average_speed_kmh": {"$avg": "$avg_speed_kmh"},
+                "average_distance_km": {"$avg": "$distance_km"},
+            }
+        }
+    ]
+    route_pipeline = [
+        {
+            "$group": {
+                "_id": {"$ifNull": ["$route_type", "unknown"]},
+                "count": {"$sum": 1},
+            }
+        }
+    ]
+    weather_pipeline = [
+        {
+            "$group": {
+                "_id": {"$ifNull": ["$weather", "unknown"]},
+                "count": {"$sum": 1},
+            }
+        }
+    ]
+
+    try:
+        summary_payload = asyncio.run(_run_mcp_aggregate(summary_pipeline))
+        route_payload = asyncio.run(_run_mcp_aggregate(route_pipeline))
+        weather_payload = asyncio.run(_run_mcp_aggregate(weather_pipeline))
+    except RuntimeError:
+        return None
+    except Exception:
+        return None
+
+    summary_docs = _extract_mcp_documents(summary_payload or {})
+    route_docs = _extract_mcp_documents(route_payload or {})
+    weather_docs = _extract_mcp_documents(weather_payload or {})
+
+    summary = summary_docs[0] if summary_docs else {}
+    ride_count = _coerce_int(summary.get("ride_count")) or 0
+    distance_km = _coerce_float(summary.get("distance_km")) or 0.0
+    fuel_liters = _coerce_float(summary.get("fuel_liters")) or 0.0
+    average_speed_kmh = _coerce_float(summary.get("average_speed_kmh"))
+    average_distance_km = _coerce_float(summary.get("average_distance_km"))
+
+    route_type_breakdown = {
+        str(doc.get("_id") or "unknown"): (_coerce_int(doc.get("count")) or 0)
+        for doc in route_docs
+    }
+    weather_breakdown = {
+        str(doc.get("_id") or "unknown"): (_coerce_int(doc.get("count")) or 0)
+        for doc in weather_docs
+    }
+
+    fuel_efficiency = (distance_km / fuel_liters) if fuel_liters > 0 else None
+    return {
+        "ride_count": ride_count,
+        "distance_km": distance_km,
+        "fuel_liters": fuel_liters,
+        "average_speed_kmh": average_speed_kmh,
+        "average_distance_km": average_distance_km,
+        "fuel_efficiency_kmpl": fuel_efficiency,
+        "route_type_breakdown": route_type_breakdown,
+        "weather_breakdown": weather_breakdown,
+        "source": "mcp",
+    }
+
+
+def _get_trips_aggregates_python(db) -> dict[str, object] | None:
+    summary_pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "ride_count": {"$sum": 1},
+                "distance_km": {"$sum": {"$ifNull": ["$distance_km", 0]}},
+                "fuel_liters": {"$sum": {"$ifNull": ["$fuel_used_liters", 0]}},
+                "average_speed_kmh": {"$avg": "$avg_speed_kmh"},
+                "average_distance_km": {"$avg": "$distance_km"},
+            }
+        }
+    ]
+    route_pipeline = [
+        {
+            "$group": {
+                "_id": {"$ifNull": ["$route_type", "unknown"]},
+                "count": {"$sum": 1},
+            }
+        }
+    ]
+    weather_pipeline = [
+        {
+            "$group": {
+                "_id": {"$ifNull": ["$weather", "unknown"]},
+                "count": {"$sum": 1},
+            }
+        }
+    ]
+
+    summary_docs = list(db["ride_logs"].aggregate(summary_pipeline))
+    route_docs = list(db["ride_logs"].aggregate(route_pipeline))
+    weather_docs = list(db["ride_logs"].aggregate(weather_pipeline))
+
+    summary = summary_docs[0] if summary_docs else {}
+    ride_count = _coerce_int(summary.get("ride_count")) or 0
+    distance_km = _coerce_float(summary.get("distance_km")) or 0.0
+    fuel_liters = _coerce_float(summary.get("fuel_liters")) or 0.0
+    average_speed_kmh = _coerce_float(summary.get("average_speed_kmh"))
+    average_distance_km = _coerce_float(summary.get("average_distance_km"))
+
+    route_type_breakdown = {
+        str(doc.get("_id") or "unknown"): (_coerce_int(doc.get("count")) or 0)
+        for doc in route_docs
+    }
+    weather_breakdown = {
+        str(doc.get("_id") or "unknown"): (_coerce_int(doc.get("count")) or 0)
+        for doc in weather_docs
+    }
+
+    fuel_efficiency = (distance_km / fuel_liters) if fuel_liters > 0 else None
+    return {
+        "ride_count": ride_count,
+        "distance_km": distance_km,
+        "fuel_liters": fuel_liters,
+        "average_speed_kmh": average_speed_kmh,
+        "average_distance_km": average_distance_km,
+        "fuel_efficiency_kmpl": fuel_efficiency,
+        "route_type_breakdown": route_type_breakdown,
+        "weather_breakdown": weather_breakdown,
+        "source": "python",
+    }
 
 
 def _enrich_open_reminders_for_watch(
@@ -551,7 +745,7 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
         )
 
         recent_rides = list(
-            db["ride_logs"].find({}, {"_id": 0}).sort("date", DESCENDING).limit(5)
+            db["ride_logs"].find({}, {"_id": 0}).sort("date", DESCENDING).limit(25)
         )
 
         profile = db["rider_profiles"].find_one({"user_id": user_id}, {"_id": 0})
@@ -561,6 +755,12 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
             dashboard_totals = _get_dashboard_totals_mcp()
         if dashboard_totals is None:
             dashboard_totals = _get_dashboard_totals_python(db)
+
+        trips_analysis = None
+        if not _bool_env("USE_PYTHON_FALLBACK"):
+            trips_analysis = _get_trips_aggregates_mcp()
+        if trips_analysis is None:
+            trips_analysis = _get_trips_aggregates_python(db)
 
     latest_odometer_end_km = None
     last_ride_date = None
@@ -607,6 +807,9 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
         unique_weather = list(dict.fromkeys(weather_values))
         weather_summary = unique_weather[0] if len(unique_weather) == 1 else "Mixed recent weather"
 
+    if trips_analysis is None:
+        trips_analysis = _build_trips_analysis_from_rides(recent_rides)
+
     dashboard = None
     if dashboard_totals is not None:
         dashboard = _build_dashboard_tab_data(*dashboard_totals)
@@ -632,6 +835,7 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
                 "distance_km": total_distance_km,
                 "fuel_liters": total_fuel_liters,
             },
+            historical_analysis=trips_analysis,
             weather_summary=weather_summary,
             message=None if recent_rides else "No recent rides found.",
         ),
