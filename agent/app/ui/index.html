@@ -17,7 +17,12 @@
         --muted: #a8a0a0;
         --accent: #ff5533;
         --accent-2: #ff8f5c;
+        --accent-amber: #ffbf52;
+        --accent-cyan: #65c9ff;
         --accent-glow: rgba(255, 85, 51, 0.22);
+        --accent-cyan-glow: rgba(101, 201, 255, 0.22);
+        --panel-warm: rgba(255, 143, 92, 0.1);
+        --panel-cool: rgba(101, 201, 255, 0.08);
         --status-critical: #ff5959;
         --status-warning: #ffc857;
         --status-safe: #41c28e;
@@ -292,6 +297,11 @@
         padding: 18px 20px;
         border-radius: 22px;
         animation: panelLift 420ms ease;
+        background:
+          radial-gradient(circle at 90% 8%, rgba(101, 201, 255, 0.12), transparent 38%),
+          radial-gradient(circle at 8% 20%, rgba(255, 191, 82, 0.12), transparent 40%),
+          var(--panel);
+        border-color: rgba(255, 191, 82, 0.24);
       }
 
       .topbar-left {
@@ -329,6 +339,12 @@
         gap: 10px;
         align-items: center;
         justify-content: flex-end;
+      }
+
+      .topbar-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
       }
 
       .field {
@@ -675,20 +691,30 @@
       }
 
       .dashboard-badge {
-        background: linear-gradient(135deg, rgba(255, 85, 51, 0.18), rgba(255, 143, 92, 0.1));
+        background: linear-gradient(135deg, rgba(255, 85, 51, 0.3), rgba(255, 191, 82, 0.2));
         color: var(--text);
+        border-color: rgba(255, 170, 79, 0.45);
       }
 
       .dashboard-state {
         color: var(--muted);
-        background: rgba(255, 255, 255, 0.04);
+        background: linear-gradient(135deg, rgba(101, 201, 255, 0.12), rgba(255, 255, 255, 0.03));
+        border-color: rgba(101, 201, 255, 0.35);
+      }
+
+      #dashboard.panel {
+        background:
+          radial-gradient(circle at 90% 4%, var(--panel-cool), transparent 40%),
+          radial-gradient(circle at 8% 12%, var(--panel-warm), transparent 42%),
+          var(--panel);
+        border-color: rgba(255, 191, 82, 0.24);
       }
 
       .service-watch {
         margin-top: 12px;
         border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: linear-gradient(180deg, rgba(255, 85, 51, 0.14), rgba(255, 255, 255, 0.03));
+        border: 1px solid rgba(255, 191, 82, 0.28);
+        background: linear-gradient(180deg, rgba(255, 191, 82, 0.2), rgba(255, 255, 255, 0.03));
         padding: 14px;
       }
 
@@ -792,13 +818,13 @@
       .dashboard-insight {
         border-radius: 18px;
         border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.04);
+        background: linear-gradient(170deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
         padding: 14px;
       }
 
       .dashboard-insight-hero {
-        background: linear-gradient(180deg, rgba(255, 85, 51, 0.16), rgba(255, 255, 255, 0.04));
-        border-color: rgba(255, 85, 51, 0.22);
+        background: linear-gradient(180deg, rgba(255, 191, 82, 0.24), rgba(101, 201, 255, 0.08));
+        border-color: rgba(255, 191, 82, 0.35);
       }
 
       .dashboard-odometer {
@@ -809,7 +835,7 @@
         letter-spacing: -0.06em;
         font-weight: 800;
         color: var(--text);
-        text-shadow: 0 0 24px rgba(255, 85, 51, 0.12);
+        text-shadow: 0 0 24px rgba(255, 191, 82, 0.24);
       }
 
       .dashboard-insight strong {
@@ -861,9 +887,21 @@
 
       .trend-card {
         border-radius: 18px;
-        border: 1px solid var(--line);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
         padding: 14px;
+      }
+
+      .dashboard-trends .trend-card:nth-child(1) {
+        border-color: rgba(255, 191, 82, 0.32);
+      }
+
+      .dashboard-trends .trend-card:nth-child(2) {
+        border-color: rgba(101, 201, 255, 0.3);
+      }
+
+      .dashboard-trends .trend-card:nth-child(3) {
+        border-color: rgba(255, 111, 60, 0.32);
       }
 
       .trend-card strong {
@@ -912,6 +950,99 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
         margin: 12px 0;
+      }
+
+      .trips-controls .secondary {
+        justify-self: start;
+        padding: 10px 14px;
+        border-radius: 14px;
+      }
+
+      .trips-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .tab-badges,
+      .profile-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .trip-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 5px 10px;
+        font-size: 0.76rem;
+        color: var(--muted);
+      }
+
+      .trip-badge strong {
+        font-size: 0.76rem;
+        color: var(--text);
+      }
+
+      .trip-badge.warm {
+        border-color: rgba(255, 191, 82, 0.36);
+      }
+
+      .trip-badge.cool {
+        border-color: rgba(101, 201, 255, 0.36);
+      }
+
+      .trip-badge.fire {
+        border-color: rgba(255, 111, 60, 0.36);
+      }
+
+      #profile.panel {
+        background:
+          radial-gradient(circle at 90% 6%, rgba(101, 201, 255, 0.08), transparent 36%),
+          radial-gradient(circle at 10% 8%, rgba(255, 191, 82, 0.08), transparent 40%),
+          var(--panel);
+        border-color: rgba(101, 201, 255, 0.2);
+      }
+
+      .chat.panel,
+      .composer.panel {
+        border-color: rgba(255, 255, 255, 0.16);
+        background:
+          radial-gradient(circle at 92% 8%, rgba(255, 191, 82, 0.08), transparent 36%),
+          radial-gradient(circle at 8% 90%, rgba(101, 201, 255, 0.06), transparent 34%),
+          rgba(255, 255, 255, 0.05);
+      }
+
+      .trip-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .trip-meta-chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 8px;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      .trip-meta-chip.route {
+        border-color: rgba(255, 191, 82, 0.35);
+      }
+
+      .trip-meta-chip.weather {
+        border-color: rgba(101, 201, 255, 0.35);
       }
 
       .trip-filter {
@@ -1153,6 +1284,10 @@
           width: 100%;
         }
 
+        .topbar-badges {
+          width: 100%;
+        }
+
         .topbar {
           flex-direction: column;
           align-items: stretch;
@@ -1264,6 +1399,11 @@
           </div>
 
           <div class="topbar-right">
+            <div class="topbar-badges">
+              <span class="trip-badge warm"><strong>Mode</strong> Copilot</span>
+              <span class="trip-badge cool"><strong>Telemetry</strong> Live</span>
+              <span class="trip-badge fire"><strong>Theme</strong> Warm Performance</span>
+            </div>
             <div class="field">
               <label for="userId">User ID</label>
               <select id="userId" name="userId">
@@ -1298,6 +1438,11 @@
           <div id="copilot" class="tab-panel active copilot-layout">
             <section class="panel chat" id="chat"></section>
             <section class="panel composer">
+              <div class="tab-badges">
+                <span class="trip-badge warm"><strong>Session</strong> Continuous</span>
+                <span class="trip-badge cool"><strong>Stream</strong> Real-time</span>
+                <span class="trip-badge fire"><strong>Focus</strong> Ride Guidance</span>
+              </div>
               <textarea id="prompt" placeholder="Ask about service intervals, trip weather, or a symptom..."></textarea>
               <div class="actions">
                 <div class="buttons">
@@ -1396,12 +1541,16 @@
                     <option value="distance">Longest distance</option>
                   </select>
                 </label>
+                <button id="tripsResetBtn" class="secondary" type="button">Reset filters</button>
               </div>
               <div class="chip-grid">
                 <div class="chip"><strong>Window totals</strong><span id="tripsTotals">Loading trip totals...</span></div>
                 <div class="chip"><strong>Weather pattern</strong><span id="tripsWeather">Loading trip weather...</span></div>
                 <div class="chip"><strong>Route mix</strong><span id="tripsRouteMix">Loading route mix...</span></div>
                 <div class="chip"><strong>Fuel efficiency</strong><span id="tripsEfficiency">Loading efficiency...</span></div>
+              </div>
+              <div id="tripsBadges" class="trips-badges">
+                <span class="trip-badge"><strong>Snapshot</strong> Loading...</span>
               </div>
               <div id="tripsHistory" class="list-grid">
                 <div class="list-item"><strong>Loading rides...</strong><span>Please wait.</span></div>
@@ -1414,6 +1563,11 @@
               </div>
               <h4>Profile</h4>
               <p id="profileSummary">Read-only rider preferences in a compact, demo-friendly panel.</p>
+              <div class="profile-badges">
+                <span class="trip-badge warm"><strong>Preference scope</strong> Rider</span>
+                <span class="trip-badge cool"><strong>Sync</strong> Backend snapshot</span>
+                <span class="trip-badge fire"><strong>Use</strong> Planning context</span>
+              </div>
               <div id="profileRows">
                 <div class="profile-row"><strong>Preferred language</strong><span>English</span></div>
                 <div class="profile-row"><strong>Weather tolerance</strong><span>Moderate rain only, avoid gusty routes</span></div>
@@ -1461,6 +1615,8 @@
       const tripsRouteFilter = document.getElementById("tripsRouteFilter");
       const tripsWeatherFilter = document.getElementById("tripsWeatherFilter");
       const tripsSort = document.getElementById("tripsSort");
+      const tripsResetBtn = document.getElementById("tripsResetBtn");
+      const tripsBadges = document.getElementById("tripsBadges");
       const profileSummary = document.getElementById("profileSummary");
       const profileRows = document.getElementById("profileRows");
 
@@ -1471,6 +1627,7 @@
       const refreshTimers = new Map();
       let tabDataLoaded = false;
       let tripsRawRides = [];
+      let tripsHistoricalSnapshot = {};
 
       function formatDate(value) {
         if (!value) {
@@ -1720,6 +1877,48 @@
         return filtered;
       }
 
+      function getDominantValue(rides, key) {
+        const counts = new Map();
+        rides.forEach((ride) => {
+          const value = String(ride[key] || "unknown");
+          counts.set(value, (counts.get(value) || 0) + 1);
+        });
+        let winner = "N/A";
+        let best = -1;
+        counts.forEach((count, value) => {
+          if (count > best) {
+            winner = value;
+            best = count;
+          }
+        });
+        return winner;
+      }
+
+      function renderTripsBadges(filteredRides, historical = {}) {
+        if (!tripsBadges) {
+          return;
+        }
+
+        const source = String(historical.source || "snapshot").toUpperCase();
+        const topRoute = filteredRides.length ? getDominantValue(filteredRides, "route_type") : "N/A";
+        const topWeather = filteredRides.length ? getDominantValue(filteredRides, "weather") : "N/A";
+        const rideCount = filteredRides.length;
+
+        tripsBadges.innerHTML = [
+          `<span class="trip-badge"><strong>Rides</strong> ${rideCount}</span>`,
+          `<span class="trip-badge"><strong>Top route</strong> ${topRoute}</span>`,
+          `<span class="trip-badge"><strong>Top weather</strong> ${topWeather}</span>`,
+          `<span class="trip-badge"><strong>Source</strong> ${source}</span>`,
+        ].join("");
+      }
+
+      function resetTripsFilters() {
+        if (tripsWindow) tripsWindow.value = "90";
+        if (tripsRouteFilter) tripsRouteFilter.value = "all";
+        if (tripsWeatherFilter) tripsWeatherFilter.value = "all";
+        if (tripsSort) tripsSort.value = "newest";
+      }
+
       function renderTripsHistoryRows(filteredRides) {
         if (!tripsHistory) {
           return;
@@ -1729,7 +1928,10 @@
         if (!filteredRides.length) {
           const empty = document.createElement("div");
           empty.className = "list-item";
-          empty.innerHTML = "<strong>No rides match this filter</strong><span>Try a wider window or reset route/weather filters.</span>";
+          const hasAnyRides = Array.isArray(tripsRawRides) && tripsRawRides.length > 0;
+          empty.innerHTML = hasAnyRides
+            ? "<strong>No rides match current filters</strong><span>Use Reset filters or widen the time window.</span>"
+            : "<strong>No ride history available yet</strong><span>Log a ride first to unlock historical analysis.</span>";
           tripsHistory.appendChild(empty);
           return;
         }
@@ -1749,10 +1951,17 @@
             : "odometer unknown";
           headline.textContent = `${route} · ${weather} · ${odometer}`;
 
+          const meta = document.createElement("div");
+          meta.className = "trip-meta";
+          meta.innerHTML = `
+            <span class="trip-meta-chip route">Route: ${route}</span>
+            <span class="trip-meta-chip weather">Weather: ${weather}</span>
+          `;
+
           const detail = document.createElement("details");
           detail.className = "trip-detail";
           const summary = document.createElement("summary");
-          summary.textContent = "View drill-down";
+          summary.textContent = "View details";
 
           const detailGrid = document.createElement("div");
           detailGrid.className = "trip-detail-grid";
@@ -1780,6 +1989,7 @@
           detail.appendChild(detailGrid);
           item.appendChild(title);
           item.appendChild(headline);
+          item.appendChild(meta);
           item.appendChild(detail);
           tripsHistory.appendChild(item);
         });
@@ -1945,9 +2155,9 @@
           .filter((v) => Number.isFinite(v));
         const sparkSeries = distanceSeries.slice(-12);
 
-        renderSvgTrend(chartDistanceEl, distanceSeries, "#ff8f5c", "rgba(255,143,92,0.18)");
-        renderSvgTrend(chartOdometerEl, odometerSeries, "#4d8cff", "rgba(77,140,255,0.18)");
-        renderSvgTrend(chartSparklineEl, sparkSeries, "#ff5533", "rgba(255,85,51,0.18)");
+        renderSvgTrend(chartDistanceEl, distanceSeries, "#ffbf52", "rgba(255,191,82,0.2)");
+        renderSvgTrend(chartOdometerEl, odometerSeries, "#65c9ff", "rgba(101,201,255,0.2)");
+        renderSvgTrend(chartSparklineEl, sparkSeries, "#ff6f3c", "rgba(255,111,60,0.2)");
 
         const sevenDayMs = 7 * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -1982,6 +2192,7 @@
         const routeBreakdown = historical.route_type_breakdown || {};
 
         tripsRawRides = recentRides;
+        tripsHistoricalSnapshot = historical;
         buildFilterOptions(tripsRouteFilter, recentRides.map((ride) => String(ride.route_type || "unknown")));
         buildFilterOptions(tripsWeatherFilter, recentRides.map((ride) => String(ride.weather || "unknown")));
 
@@ -2002,7 +2213,9 @@
           ? `${formatDecimal(efficiency, 1)} km/L · avg ${Number.isFinite(avgSpeed) ? `${formatDecimal(avgSpeed, 1)} km/h` : "speed N/A"}`
           : "Efficiency unavailable.";
 
-        renderTripsHistoryRows(getFilteredTrips());
+        const filtered = getFilteredTrips();
+        renderTripsHistoryRows(filtered);
+        renderTripsBadges(filtered, historical);
       }
 
       function formatPreferenceValue(value) {
@@ -2477,6 +2690,9 @@
               if (tripsHistory) {
                 tripsHistory.innerHTML = "<div class=\"list-item\"><strong>Unable to load ride history</strong><span>Try refreshing again.</span></div>";
               }
+              if (tripsBadges) {
+                tripsBadges.innerHTML = "<span class=\"trip-badge\"><strong>Status</strong> unavailable</span>";
+              }
             }
             if (profileSummary && profileRows) {
               profileSummary.textContent = `Profile unavailable: ${error.message}`;
@@ -2526,6 +2742,10 @@
           if (tripsHistory) {
             tripsHistory.innerHTML = "<div class=\"list-item\"><strong>Loading rides...</strong><span>Please wait.</span></div>";
           }
+          if (tripsBadges) {
+            tripsBadges.innerHTML = "<span class=\"trip-badge\"><strong>Snapshot</strong> Loading...</span>";
+          }
+          resetTripsFilters();
         }
         if (profileSummary && profileRows) {
           profileSummary.textContent = "Read-only rider preferences in a compact, demo-friendly panel.";
@@ -2546,8 +2766,20 @@
       [tripsWindow, tripsRouteFilter, tripsWeatherFilter, tripsSort]
         .filter(Boolean)
         .forEach((control) => {
-          control.addEventListener("change", () => renderTripsHistoryRows(getFilteredTrips()));
+          control.addEventListener("change", () => {
+            const filtered = getFilteredTrips();
+            renderTripsHistoryRows(filtered);
+            renderTripsBadges(filtered, tripsHistoricalSnapshot);
+          });
         });
+      if (tripsResetBtn) {
+        tripsResetBtn.addEventListener("click", () => {
+          resetTripsFilters();
+          const filtered = getFilteredTrips();
+          renderTripsHistoryRows(filtered);
+          renderTripsBadges(filtered, tripsHistoricalSnapshot);
+        });
+      }
 
       if (location.hash === "#app") {
         showApp();
