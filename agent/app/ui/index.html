@@ -311,11 +311,24 @@
       }
 
       .logo {
-        width: 44px;
-        height: 44px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, var(--accent), #ffb38b);
-        box-shadow: 0 12px 30px rgba(255, 85, 51, 0.22);
+        position: relative;
+        width: 54px;
+        height: 38px;
+        border-radius: 12px 18px 18px 12px;
+        background: linear-gradient(135deg, #ff6a44, #ffb95f);
+        box-shadow: 0 12px 26px rgba(255, 111, 60, 0.3);
+        overflow: hidden;
+      }
+
+      .logo::after {
+        content: "";
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        width: 12px;
+        height: 22px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.28);
       }
 
       .brand-copy {
@@ -324,12 +337,13 @@
       }
 
       .brand-copy strong {
-        font-size: 1rem;
-        letter-spacing: 0.02em;
+        font-size: 1.06rem;
+        letter-spacing: 0.025em;
+        font-weight: 800;
       }
 
       .brand-copy span {
-        color: var(--muted);
+        color: rgba(245, 239, 233, 0.72);
         font-size: 0.86rem;
       }
 
@@ -367,6 +381,29 @@
         background: rgba(255, 255, 255, 0.05);
         color: var(--text);
         font-family: inherit;
+      }
+
+      .trip-filter select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background:
+          linear-gradient(45deg, transparent 50%, rgba(255, 191, 82, 0.9) 50%) calc(100% - 18px) calc(50% + 2px) / 6px 6px no-repeat,
+          linear-gradient(135deg, rgba(255, 191, 82, 0.9) 50%, transparent 50%) calc(100% - 13px) calc(50% + 2px) / 6px 6px no-repeat,
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+        border-color: rgba(255, 191, 82, 0.28);
+        color: var(--text);
+        padding-right: 34px;
+      }
+
+      .trip-filter select:focus {
+        border-color: rgba(101, 201, 255, 0.46);
+        box-shadow: 0 0 0 3px rgba(101, 201, 255, 0.18);
+      }
+
+      .trip-filter select option {
+        background: #16181d;
+        color: var(--text);
       }
 
       select:focus,
@@ -810,9 +847,28 @@
 
       .dashboard-insights {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 10px;
         margin-top: 12px;
+      }
+
+      .dashboard-odometer-hero {
+        border-radius: 20px;
+        border: 1px solid rgba(255, 191, 82, 0.34);
+        background: linear-gradient(165deg, rgba(255, 191, 82, 0.24), rgba(101, 201, 255, 0.09));
+        padding: 14px;
+        margin-top: 10px;
+      }
+
+      .dashboard-odometer-hero strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 0.92rem;
+      }
+
+      .dashboard-odometer-hero span {
+        color: var(--muted);
+        font-size: 0.84rem;
       }
 
       .dashboard-insight {
@@ -1360,7 +1416,7 @@
             <h1>Swift control for every ride.</h1>
             <p class="landing-lead">
               A quick overview of the app before you enter the cockpit. Start with Copilot for live ride help, then use the
-              tabs to check dashboard service watch, review historical trips, and view your profile.
+              tabs to monitor dashboard service watch, review historical trips, and view your rider profile.
             </p>
             <div class="hero-actions">
               <button id="getStartedBtn" class="primary">Get started</button>
@@ -1368,19 +1424,24 @@
             <div class="hero-notes">
               <div class="note">
                 <strong>Copilot</strong>
-                <span>Ask route questions, get ride advice, and keep the chat focused on the trip you want to make.</span>
+                <span>Ask diagnostics and trip questions, log rides, and update rider preferences right from chat.</span>
+              </div>
+              <div class="note">
+                <strong>Dashboard</strong>
+                <span>Track service watch, ride trends, totals, cadence, and your latest odometer context at a glance.</span>
               </div>
               <div class="note">
                 <strong>Trips</strong>
-                <span>Explore ride history, compare conditions, and drill into each trip before planning your next run.</span>
+                <span>Explore ride history, filter by conditions, and drill into each trip's speed, fuel, and notes.</span>
               </div>
               <div class="note">
                 <strong>Profile</strong>
-                <span>Look over rider preferences so the experience stays tuned to how you like to ride.</span>
+                <span>Review your rider preference snapshot used to personalize planning and copilot guidance.</span>
               </div>
             </div>
             <div class="landing-footer">
               <span>Copilot</span>
+              <span>Dashboard</span>
               <span>Trips</span>
               <span>Profile</span>
             </div>
@@ -1459,6 +1520,11 @@
                 <button class="secondary tab-refresh" data-tab="dashboard">Refresh view</button>
               </div>
               <h4>Dashboard</h4>
+              <div class="dashboard-odometer-hero">
+                <strong>Latest odometer</strong>
+                <span class="dashboard-odometer" id="dashboardOdometer">-- km</span>
+                <span id="dashboardLatestRide">Waiting for latest ride data.</span>
+              </div>
               <div id="serviceWatch" class="service-watch">
                 <div class="service-watch-head">
                   <strong>Service Watch</strong>
@@ -1484,11 +1550,6 @@
               </div>
               <div class="dashboard-insights">
                 <div class="dashboard-insight"><strong>Ride cadence</strong><span id="dashboardCadence">Waiting for recent ride data.</span></div>
-                <div class="dashboard-insight dashboard-insight-hero">
-                  <strong>Latest ride</strong>
-                  <span class="dashboard-odometer" id="dashboardOdometer">-- km</span>
-                  <span id="dashboardLatestRide">Waiting for latest ride data.</span>
-                </div>
               </div>
               <div class="dashboard-trends">
                 <div class="trend-card">
@@ -2785,7 +2846,7 @@
         showApp();
       }
 
-      addMessage("assistant", "Welcome aboard. Start with a trip question, a service check, or a weather route ask when you're ready.", { forceNew: true });
+      addMessage("assistant", "Welcome aboard. I can help with diagnostics, maintenance checks, trip planning, ride logging, and rider preference updates. Try asking for a service check, weather-aware route idea, ride log entry, or a profile preference update.", { forceNew: true });
       setStatus("Ready", "idle");
     </script>
     </body>
