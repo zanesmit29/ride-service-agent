@@ -1185,7 +1185,7 @@
             <h1>Swift control for every ride.</h1>
             <p class="landing-lead">
               A quick overview of the app before you enter the cockpit. Start with Copilot for live ride help, then use the
-              tabs to check vehicle status, open reminders, review trips, and view your profile.
+              tabs to check vehicle status, dashboard service watch, review trips, and view your profile.
             </p>
             <div class="hero-actions">
               <button id="getStartedBtn" class="primary">Get started</button>
@@ -1200,10 +1200,6 @@
                 <span>Check ride status at a glance, including the latest odometer reading and service highlight.</span>
               </div>
               <div class="note">
-                <strong>Reminders</strong>
-                <span>See open maintenance items so small jobs do not get missed before your next ride.</span>
-              </div>
-              <div class="note">
                 <strong>Trips</strong>
                 <span>Review recent ride history, totals, and weather patterns to help plan the next run.</span>
               </div>
@@ -1215,7 +1211,6 @@
             <div class="landing-footer">
               <span>Copilot</span>
               <span>Vehicle</span>
-              <span>Reminders</span>
               <span>Trips</span>
               <span>Profile</span>
             </div>
@@ -1261,7 +1256,6 @@
           <button class="tab active" data-tab="copilot">Copilot</button>
           <button class="tab" data-tab="dashboard">Dashboard</button>
           <button class="tab" data-tab="vehicle">Vehicle</button>
-          <button class="tab" data-tab="reminders">Reminders</button>
           <button class="tab" data-tab="trips">Trips</button>
           <button class="tab" data-tab="profile">Profile</button>
         </nav>
@@ -1345,17 +1339,6 @@
               </div>
             </section>
 
-            <section id="reminders" class="tab-panel panel">
-              <div class="refresh-bar">
-                <button class="secondary tab-refresh" data-tab="reminders">Refresh view</button>
-              </div>
-              <h4>Reminders</h4>
-              <p id="remindersSummary">Open service reminders, staged as a clean frontend placeholder.</p>
-              <div class="list-grid" id="remindersList">
-                <div class="list-item"><strong>Chain lube</strong><span>Loading reminders...</span></div>
-              </div>
-            </section>
-
             <section id="trips" class="tab-panel panel">
               <div class="refresh-bar">
                 <button class="secondary tab-refresh" data-tab="trips">Refresh view</button>
@@ -1414,8 +1397,6 @@
       const chartDistanceEl = document.getElementById("chartDistance");
       const chartOdometerEl = document.getElementById("chartOdometer");
       const chartSparklineEl = document.getElementById("chartSparkline");
-      const remindersSummary = document.getElementById("remindersSummary");
-      const remindersList = document.getElementById("remindersList");
       const tripsSummary = document.getElementById("tripsSummary");
       const tripsTotals = document.getElementById("tripsTotals");
       const tripsWeather = document.getElementById("tripsWeather");
@@ -1824,49 +1805,6 @@
           : "No cadence trend data yet.";
       }
 
-      function renderRemindersData(reminders) {
-        if (!remindersSummary || !remindersList) {
-          return;
-        }
-
-        const openReminders = Array.isArray(reminders.open_reminders) ? reminders.open_reminders : [];
-        remindersSummary.textContent = reminders.message || "Open service reminders loaded from the backend contract.";
-        remindersList.innerHTML = "";
-
-        if (!openReminders.length) {
-          const emptyItem = document.createElement("div");
-          emptyItem.className = "list-item";
-          emptyItem.innerHTML = "<strong>No open reminders</strong><span>Nothing is currently due.</span>";
-          remindersList.appendChild(emptyItem);
-          return;
-        }
-
-        openReminders.forEach((reminder) => {
-          const item = document.createElement("div");
-          item.className = "list-item";
-
-          const title = document.createElement("strong");
-          title.textContent = reminder.service_type || "Service reminder";
-
-          const details = document.createElement("span");
-          const parts = [];
-          if (reminder.due_km !== null && reminder.due_km !== undefined) {
-            parts.push(`Due at ${reminder.due_km} km`);
-          }
-          if (reminder.due_date) {
-            parts.push(`by ${formatDate(reminder.due_date)}`);
-          }
-          if (reminder.status) {
-            parts.push(`status ${reminder.status}`);
-          }
-          details.textContent = parts.join(" · ") || "Open reminder";
-
-          item.appendChild(title);
-          item.appendChild(details);
-          remindersList.appendChild(item);
-        });
-      }
-
       function renderTripsData(trips) {
         if (!tripsSummary || !tripsTotals || !tripsWeather) {
           return;
@@ -2051,7 +1989,6 @@
           openReminders: Array.isArray(data.reminders?.open_reminders) ? data.reminders.open_reminders : [],
         });
         renderVehicleData(data.vehicle || {});
-        renderRemindersData(data.reminders || {});
         renderTripsData(data.trips || {});
         renderProfileData(data.profile || {});
         return data;
@@ -2334,15 +2271,11 @@
           statusLine.textContent = `Refreshing ${heading.textContent.toLowerCase()}...`;
         }
 
-        if (tabName === "vehicle" || tabName === "reminders" || tabName === "trips" || tabName === "profile") {
+        if (tabName === "vehicle" || tabName === "trips" || tabName === "profile") {
           try {
             await loadTabData();
           } catch (error) {
             renderVehicleError(error.message);
-            if (remindersSummary && remindersList) {
-              remindersSummary.textContent = `Reminders unavailable: ${error.message}`;
-              remindersList.innerHTML = "<div class=\"list-item\"><strong>Unable to load reminders</strong><span>Try refreshing again.</span></div>";
-            }
             if (tripsSummary && tripsTotals && tripsWeather) {
               tripsSummary.textContent = `Trips unavailable: ${error.message}`;
               tripsTotals.textContent = "Unable to load trip totals.";
@@ -2388,10 +2321,6 @@
           vehicleSummary.textContent = "Latest ride context rendered as a sporty dashboard panel.";
           vehicleOdometer.textContent = "Loading vehicle data...";
           vehicleService.textContent = "Loading vehicle data...";
-        }
-        if (remindersSummary && remindersList) {
-          remindersSummary.textContent = "Open service reminders, staged as a clean frontend placeholder.";
-          remindersList.innerHTML = "<div class=\"list-item\"><strong>Loading reminders...</strong><span>Please wait.</span></div>";
         }
         if (tripsSummary && tripsTotals && tripsWeather) {
           tripsSummary.textContent = "Recent ride history and weather summary, designed for future wiring.";
