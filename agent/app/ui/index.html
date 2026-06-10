@@ -1560,10 +1560,6 @@
                   <strong>Odometer progression</strong>
                   <svg id="chartOdometer" class="trend-svg" viewBox="0 0 320 120" preserveAspectRatio="none" role="img" aria-label="Odometer progression"></svg>
                 </div>
-                <div class="trend-card">
-                  <strong>Recent rides (sparkline)</strong>
-                  <svg id="chartSparkline" class="trend-svg spark" viewBox="0 0 320 64" preserveAspectRatio="none" role="img" aria-label="Recent rides sparkline"></svg>
-                </div>
               </div>
             </section>
 
@@ -1665,7 +1661,6 @@
       const serviceWatchList = document.getElementById("serviceWatchList");
       const chartDistanceEl = document.getElementById("chartDistance");
       const chartOdometerEl = document.getElementById("chartOdometer");
-      const chartSparklineEl = document.getElementById("chartSparkline");
       const tripsSummary = document.getElementById("tripsSummary");
       const tripsTotals = document.getElementById("tripsTotals");
       const tripsWeather = document.getElementById("tripsWeather");
@@ -1742,6 +1737,11 @@
         }
 
         function normalizeUrgency(reminder) {
+          const rawUrgency = typeof reminder.urgency === "string" ? reminder.urgency.toLowerCase() : "";
+          if (rawUrgency === "critical" || rawUrgency === "warning" || rawUrgency === "safe") {
+            return rawUrgency;
+          }
+
           const dueKm = Number(reminder.due_km);
           const kmUntil = Number(reminder.km_until_due);
           const dueDate = parseDate(reminder.due_date);
@@ -1787,12 +1787,6 @@
             if (daysUntil <= 30) return "warning";
           }
 
-          // Raw backend urgency is used last as a fallback only.
-          const rawUrgency = typeof reminder.urgency === "string" ? reminder.urgency.toLowerCase() : "";
-          if (rawUrgency === "critical" || rawUrgency === "warning" || rawUrgency === "safe") {
-            return rawUrgency;
-          }
-
           return "safe";
         }
 
@@ -1830,21 +1824,7 @@
             detailParts.push(`by ${formatDate(reminder.due_date)}`);
           }
           const dueSummary = detailParts.join(" · ") || "Due details unavailable";
-          let reason = reminder.watch_reason ? String(reminder.watch_reason) : "";
-          if (!reason || reason === dueSummary) {
-            const dueKm = Number(reminder.due_km);
-            const dueDate = parseDate(reminder.due_date);
-            const reasonParts = [];
-            if (Number.isFinite(dueKm) && Number.isFinite(currentOdometer)) {
-              const kmDelta = dueKm - currentOdometer;
-              reasonParts.push(kmDelta < 0 ? `${Math.abs(kmDelta)} km overdue` : `${kmDelta} km remaining`);
-            }
-            const daysDelta = wholeDaysUntil(dueDate);
-            if (Number.isFinite(daysDelta)) {
-              reasonParts.push(daysDelta < 0 ? `${Math.abs(daysDelta)} days overdue` : `${daysDelta} days remaining`);
-            }
-            reason = reasonParts.join(" · ") || dueSummary;
-          }
+          const reason = reminder.watch_reason ? String(reminder.watch_reason) : dueSummary;
 
           const item = document.createElement("div");
           item.className = `service-watch-item ${urgency}`;
@@ -2214,11 +2194,9 @@
         const odometerSeries = sortedTrendRides
           .map((r) => (r.odometer_end_km != null ? Number(r.odometer_end_km) : null))
           .filter((v) => Number.isFinite(v));
-        const sparkSeries = distanceSeries.slice(-12);
 
         renderSvgTrend(chartDistanceEl, distanceSeries, "#ffbf52", "rgba(255,191,82,0.2)");
         renderSvgTrend(chartOdometerEl, odometerSeries, "#65c9ff", "rgba(101,201,255,0.2)");
-        renderSvgTrend(chartSparklineEl, sparkSeries, "#ff6f3c", "rgba(255,111,60,0.2)");
 
         const sevenDayMs = 7 * 24 * 60 * 60 * 1000;
         const now = Date.now();

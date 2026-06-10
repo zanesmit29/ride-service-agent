@@ -130,6 +130,7 @@ print(insert_ride_log(date="today", distance_km=120, odometer_end_km=44000, note
 - `insert_reminder` in `tools.py` performs a direct `pymongo` insert into `ride_agent_db.service_reminders` and closes the client — ensure your connection string and DB permissions are correct.
 - `insert_ride_log` normalizes natural-language dates in Python before writing to `ride_agent_db.ride_logs`, and keeps optional metadata fields null when they are not provided.
 - `parse_natural_date_range` is the shared trip-planning date helper; it keeps the chat natural while still normalizing dates before weather lookups.
+- Service Watch now derives due status from `service_intervals` each refresh. Interval values of `0` (or missing) disable that condition, `interval_months` takes precedence over `interval_days` when both exist, and overdue/due-soon uses OR semantics only across active conditions.
 - `prompts.py` contains the authoritative domain rules and expected collection schemas; if you modify the DB layout, update these rules accordingly.
 - FastAPI (`agent/app/fast_api_app.py`) is present but not the immediate focus — current work is on agent behavior and tooling.
 

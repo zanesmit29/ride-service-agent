@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+from calendar import monthrange
 from collections import Counter
 from pymongo import DESCENDING, MongoClient
 from datetime import datetime, timezone, date as datetime_date, timedelta
@@ -190,6 +191,64 @@ def _coerce_date(value: object) -> datetime_date | None:
         except Exception:
             return None
     return None
+
+
+def _add_months(base_date: datetime_date, months: int) -> datetime_date:
+    total_month_index = (base_date.month - 1) + months
+    year = base_date.year + (total_month_index // 12)
+    month = (total_month_index % 12) + 1
+    day = min(base_date.day, monthrange(year, month)[1])
+    return datetime_date(year, month, day)
+
+
+def _build_service_watch_items_from_intervals(
+    service_intervals: list[dict[str, object]],
+    open_reminders: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    reminders_by_type: dict[str, dict[str, object]] = {}
+    for reminder in open_reminders:
+        service_type = str(reminder.get("service_type") or "").strip()
+        if service_type and service_type not in reminders_by_type:
+            reminders_by_type[service_type] = reminder
+
+    watch_items: list[dict[str, object]] = []
+    for interval in service_intervals:
+        service_type = str(interval.get("service_type") or "").strip()
+        if not service_type:
+            continue
+
+        item: dict[str, object] = {
+            "service_type": service_type,
+        }
+
+        interval_km = _coerce_int(interval.get("interval_km"))
+        last_done_km = _coerce_int(interval.get("last_done_km"))
+        if interval_km is not None and interval_km > 0 and last_done_km is not None:
+            item["due_km"] = last_done_km + interval_km
+
+        last_done_date = _coerce_date(interval.get("last_done_date"))
+        interval_months = _coerce_int(interval.get("interval_months"))
+        interval_days = _coerce_int(interval.get("interval_days"))
+        if last_done_date is not None:
+            # Month intervals take precedence over day intervals when both exist.
+            if interval_months is not None and interval_months > 0:
+                item["due_date"] = _add_months(last_done_date, interval_months).isoformat()
+            elif interval_days is not None and interval_days > 0:
+                item["due_date"] = (last_done_date + timedelta(days=interval_days)).isoformat()
+
+        reminder = reminders_by_type.get(service_type)
+        if reminder is not None:
+            item["has_open_reminder"] = True
+            item["reminder_due_km"] = reminder.get("due_km")
+            item["reminder_due_date"] = reminder.get("due_date")
+            item["reminder_status"] = reminder.get("status")
+
+        if "due_km" not in item and "due_date" not in item:
+            item["watch_reason"] = "No active interval configured."
+
+        watch_items.append(item)
+
+    return watch_items
 
 
 def _build_trips_analysis_from_rides(recent_rides: list[dict[str, object]]) -> dict[str, object]:
@@ -420,21 +479,27 @@ def _enrich_open_reminders_for_watch(
             urgency = "warning"
 
         reasons: list[str] = []
-        if overdue_by_km and km_until_due is not None:
-            reasons.append(f"{abs(km_until_due)} km overdue")
-        elif due_soon_by_km and km_until_due is not None:
-            reasons.append(f"{km_until_due} km remaining")
+        if km_until_due is not None:
+            if km_until_due < 0:
+                reasons.append(f"{abs(km_until_due)} km overdue")
+            else:
+                reasons.append(f"{km_until_due} km remaining")
 
-        if overdue_by_date and days_until_due is not None:
-            reasons.append(f"{abs(days_until_due)} days overdue")
-        elif due_soon_by_date and days_until_due is not None:
-            reasons.append(f"{days_until_due} days remaining")
+        if days_until_due is not None:
+            if days_until_due < 0:
+                reasons.append(f"{abs(days_until_due)} days overdue")
+            else:
+                reasons.append(f"{days_until_due} days remaining")
 
         if not reasons:
             if due_km is not None:
                 reasons.append(f"Due at {due_km} km")
             if due_date is not None:
                 reasons.append(f"Due by {due_date.isoformat()}")
+        if not reasons:
+            preset_reason = item.get("watch_reason")
+            if isinstance(preset_reason, str) and preset_reason.strip():
+                reasons.append(preset_reason.strip())
 
         item["km_until_due"] = km_until_due
         item["days_until_due"] = days_until_due
@@ -744,6 +809,10 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
             .sort([("due_date", 1), ("due_km", 1)])
         )
 
+        service_intervals = list(
+            db["service_intervals"].find({}, {"_id": 0})
+        )
+
         recent_rides = list(
             db["ride_logs"].find({}, {"_id": 0}).sort("date", DESCENDING).limit(25)
         )
@@ -767,6 +836,11 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
     if latest_ride_doc:
         latest_odometer_end_km = latest_ride_doc.get("odometer_end_km")
         last_ride_date = latest_ride_doc.get("date")
+
+    open_reminders = _build_service_watch_items_from_intervals(
+        service_intervals=service_intervals,
+        open_reminders=open_reminders,
+    )
 
     open_reminders = _enrich_open_reminders_for_watch(
         open_reminders=open_reminders,
