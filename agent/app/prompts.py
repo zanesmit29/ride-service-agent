@@ -1,6 +1,3 @@
-from datetime import date
-
-
 ROOT_AGENT = """
 You are the coordinator for a personal motorcycle assistant.
 
@@ -143,7 +140,14 @@ Output:
 """
 
 
-# RIDE_LOGGING_AGENT_INSTRUCTIONS will be created after DATABASE_RULES is defined.
+RIDE_LOGGING_DB_CONTEXT = """
+Database context:
+- The MongoDB database is "ride_agent_db".
+- Ride logs are stored in the "ride_logs" collection with fields: date, odometer_end_km, distance_km, route_type, avg_speed_kmh, fuel_used_liters, weather, notes.
+- You do not query the database directly. Use only the insert_ride_log tool to save rides.
+"""
+
+# RIDE_LOGGING_AGENT_INSTRUCTIONS will be created after RIDE_LOGGING_DB_CONTEXT is defined.
 
 
 DATABASE_RULES = """
@@ -376,8 +380,8 @@ TRIP_PLANNING_AGENT_INSTRUCTIONS = "\n\n".join([
 ])
 
 
-# Compose ride-logging instructions after DATABASE_RULES is defined
+# Compose ride-logging instructions with minimal DB context (not the full DATABASE_RULES)
 RIDE_LOGGING_AGENT_INSTRUCTIONS = "\n\n".join([
    RIDE_LOGGING_AGENT,
-   DATABASE_RULES,
+   RIDE_LOGGING_DB_CONTEXT,
 ])
