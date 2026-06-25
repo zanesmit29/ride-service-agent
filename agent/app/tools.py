@@ -1,17 +1,18 @@
-import asyncio
 import json
 import os
 import re
 from calendar import monthrange
 from collections import Counter
-from pymongo import DESCENDING, MongoClient
-from datetime import datetime, timezone, date as datetime_date, timedelta
+from datetime import date as datetime_date
+from datetime import datetime, timedelta, timezone
+
 import requests
-from mcp import StdioServerParameters
 from google.adk.tools.mcp_tool.mcp_session_manager import (
     MCPSessionManager,
     StdioConnectionParams,
 )
+from mcp import StdioServerParameters
+from pymongo import DESCENDING, MongoClient
 
 from app.app_utils.typing import (
     DashboardTabData,
@@ -118,7 +119,7 @@ async def _run_mcp_aggregate(pipeline: list[dict]) -> dict | None:
         await manager.close()
 
 
-def _get_dashboard_totals_mcp() -> tuple[int | None, float | None] | None:
+async def _get_dashboard_totals_mcp() -> tuple[int | None, float | None] | None:
     pipeline = [
         {
             "$group": {
@@ -129,9 +130,7 @@ def _get_dashboard_totals_mcp() -> tuple[int | None, float | None] | None:
         }
     ]
     try:
-        payload = asyncio.run(_run_mcp_aggregate(pipeline))
-    except RuntimeError:
-        return None
+        payload = await _run_mcp_aggregate(pipeline)
     except Exception:
         return None
     if not payload:
@@ -232,9 +231,13 @@ def _build_service_watch_items_from_intervals(
         if last_done_date is not None:
             # Month intervals take precedence over day intervals when both exist.
             if interval_months is not None and interval_months > 0:
-                item["due_date"] = _add_months(last_done_date, interval_months).isoformat()
+                item["due_date"] = _add_months(
+                    last_done_date, interval_months
+                ).isoformat()
             elif interval_days is not None and interval_days > 0:
-                item["due_date"] = (last_done_date + timedelta(days=interval_days)).isoformat()
+                item["due_date"] = (
+                    last_done_date + timedelta(days=interval_days)
+                ).isoformat()
 
         reminder = reminders_by_type.get(service_type)
         if reminder is not None:
@@ -251,7 +254,9 @@ def _build_service_watch_items_from_intervals(
     return watch_items
 
 
-def _build_trips_analysis_from_rides(recent_rides: list[dict[str, object]]) -> dict[str, object]:
+def _build_trips_analysis_from_rides(
+    recent_rides: list[dict[str, object]],
+) -> dict[str, object]:
     if not recent_rides:
         return {
             "ride_count": 0,
@@ -290,7 +295,9 @@ def _build_trips_analysis_from_rides(recent_rides: list[dict[str, object]]) -> d
         if avg_speed_kmh is not None:
             speed_values.append(avg_speed_kmh)
 
-    average_distance = (sum(distance_values) / len(distance_values)) if distance_values else None
+    average_distance = (
+        (sum(distance_values) / len(distance_values)) if distance_values else None
+    )
     average_speed = (sum(speed_values) / len(speed_values)) if speed_values else None
     fuel_efficiency = (total_distance / total_fuel) if total_fuel > 0 else None
 
@@ -307,7 +314,7 @@ def _build_trips_analysis_from_rides(recent_rides: list[dict[str, object]]) -> d
     }
 
 
-def _get_trips_aggregates_mcp() -> dict[str, object] | None:
+async def _get_trips_aggregates_mcp() -> dict[str, object] | None:
     summary_pipeline = [
         {
             "$group": {
@@ -338,11 +345,9 @@ def _get_trips_aggregates_mcp() -> dict[str, object] | None:
     ]
 
     try:
-        summary_payload = asyncio.run(_run_mcp_aggregate(summary_pipeline))
-        route_payload = asyncio.run(_run_mcp_aggregate(route_pipeline))
-        weather_payload = asyncio.run(_run_mcp_aggregate(weather_pipeline))
-    except RuntimeError:
-        return None
+        summary_payload = await _run_mcp_aggregate(summary_pipeline)
+        route_payload = await _run_mcp_aggregate(route_pipeline)
+        weather_payload = await _run_mcp_aggregate(weather_pipeline)
     except Exception:
         return None
 
@@ -549,7 +554,9 @@ def _parse_explicit_date(text: str) -> datetime_date | None:
     return None
 
 
-def parse_natural_date(text: str, *, today: datetime_date | None = None) -> datetime_date | None:
+def parse_natural_date(
+    text: str, *, today: datetime_date | None = None
+) -> datetime_date | None:
     """Parse a natural-language date into a concrete date when possible.
 
     Supports relative phrases like today, tomorrow, yesterday, next weekend,
@@ -584,13 +591,20 @@ def parse_natural_date(text: str, *, today: datetime_date | None = None) -> date
     return None
 
 
-def _parse_natural_date_range(text: str, *, today: datetime_date | None = None) -> tuple[str | None, str | None]:
+def _parse_natural_date_range(
+    text: str, *, today: datetime_date | None = None
+) -> tuple[str | None, str | None]:
     """Internal parser that returns a (start_date, end_date) tuple."""
     today = today or datetime_date.today()
     cleaned_text = text.strip()
     lowered_text = cleaned_text.lower()
 
-    range_match = re.split(r"\s+(?:to|through|until|till)\s+", cleaned_text, maxsplit=1, flags=re.IGNORECASE)
+    range_match = re.split(
+        r"\s+(?:to|through|until|till)\s+",
+        cleaned_text,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )
     if len(range_match) == 2:
         start_text, end_text = range_match
         start_date = parse_natural_date(start_text, today=today)
@@ -617,24 +631,24 @@ def _parse_natural_date_range(text: str, *, today: datetime_date | None = None) 
 
 
 def parse_natural_date_range(text: str) -> dict:
-        """Parse natural-language date text into tool-friendly structured output.
+    """Parse natural-language date text into tool-friendly structured output.
 
-        Returns:
-            {
-                "status": "parsed" | "unparsed",
-                "start_date": "YYYY-MM-DD" | None,
-                "end_date": "YYYY-MM-DD" | None,
-            }
-        """
-        start_date, end_date = _parse_natural_date_range(
-                text,
-                today=datetime.now(timezone.utc).date(),
-        )
-        return {
-                "status": "parsed" if (start_date and end_date) else "unparsed",
-                "start_date": start_date,
-                "end_date": end_date,
+    Returns:
+        {
+            "status": "parsed" | "unparsed",
+            "start_date": "YYYY-MM-DD" | None,
+            "end_date": "YYYY-MM-DD" | None,
         }
+    """
+    start_date, end_date = _parse_natural_date_range(
+        text,
+        today=datetime.now(timezone.utc).date(),
+    )
+    return {
+        "status": "parsed" if (start_date and end_date) else "unparsed",
+        "start_date": start_date,
+        "end_date": end_date,
+    }
 
 
 def insert_reminder(service_type: str, due_km: int, due_date: str) -> dict:
@@ -654,14 +668,17 @@ def insert_reminder(service_type: str, due_km: int, due_date: str) -> dict:
 
     with MongoClient(connection_string) as client:
         db = client["ride_agent_db"]
-        result = db["service_reminders"].insert_one({
-            "service_type": service_type,
-            "due_km": due_km,
-            "due_date": due_date,
-            "status": "open"
-        })
+        result = db["service_reminders"].insert_one(
+            {
+                "service_type": service_type,
+                "due_km": due_km,
+                "due_date": due_date,
+                "status": "open",
+            }
+        )
 
     return {"status": "logged", "inserted_id": str(result.inserted_id)}
+
 
 def insert_ride_log(
     date: str | None = None,
@@ -740,7 +757,11 @@ def insert_ride_log(
         db = client["ride_agent_db"]
         result = db["ride_logs"].insert_one(dict(doc))
 
-    return {"status": "logged", "inserted_id": str(result.inserted_id), "doc": dict(doc)}
+    return {
+        "status": "logged",
+        "inserted_id": str(result.inserted_id),
+        "doc": dict(doc),
+    }
 
 
 def get_rider_profile(user_id: str) -> dict:
@@ -757,15 +778,12 @@ def get_rider_profile(user_id: str) -> dict:
 
     with MongoClient(connection_string) as client:
         db = client["ride_agent_db"]
-        result = db["rider_profiles"].find_one(
-            {"user_id": user_id},
-            {"_id": 0}
-        )
+        result = db["rider_profiles"].find_one({"user_id": user_id}, {"_id": 0})
 
     return result if result else {"status": "not_found", "user_id": user_id}
 
 
-def get_tab_data(user_id: str = "eval_user") -> dict:
+async def get_tab_data(user_id: str = "eval_user") -> dict:
     """Build the read-only tab payload used by the frontend."""
 
     connection_string = os.getenv("MDB_MCP_CONNECTION_STRING")
@@ -809,9 +827,7 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
             .sort([("due_date", 1), ("due_km", 1)])
         )
 
-        service_intervals = list(
-            db["service_intervals"].find({}, {"_id": 0})
-        )
+        service_intervals = list(db["service_intervals"].find({}, {"_id": 0}))
 
         recent_rides = list(
             db["ride_logs"].find({}, {"_id": 0}).sort("date", DESCENDING).limit(25)
@@ -821,13 +837,13 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
 
         dashboard_totals = None
         if not _bool_env("USE_PYTHON_FALLBACK"):
-            dashboard_totals = _get_dashboard_totals_mcp()
+            dashboard_totals = await _get_dashboard_totals_mcp()
         if dashboard_totals is None:
             dashboard_totals = _get_dashboard_totals_python(db)
 
         trips_analysis = None
         if not _bool_env("USE_PYTHON_FALLBACK"):
-            trips_analysis = _get_trips_aggregates_mcp()
+            trips_analysis = await _get_trips_aggregates_mcp()
         if trips_analysis is None:
             trips_analysis = _get_trips_aggregates_python(db)
 
@@ -879,7 +895,9 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
     weather_summary = None
     if weather_values:
         unique_weather = list(dict.fromkeys(weather_values))
-        weather_summary = unique_weather[0] if len(unique_weather) == 1 else "Mixed recent weather"
+        weather_summary = (
+            unique_weather[0] if len(unique_weather) == 1 else "Mixed recent weather"
+        )
 
     if trips_analysis is None:
         trips_analysis = _build_trips_analysis_from_rides(recent_rides)
@@ -894,7 +912,9 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
             latest_odometer_end_km=latest_odometer_end_km,
             last_ride_date=last_ride_date,
             next_service_highlight=next_service_highlight,
-            message=None if (latest_ride_doc or open_reminders) else "No ride history or reminders found.",
+            message=None
+            if (latest_ride_doc or open_reminders)
+            else "No ride history or reminders found.",
         ),
         reminders=RemindersTabData(
             state="ready" if open_reminders else "empty",
@@ -923,6 +943,7 @@ def get_tab_data(user_id: str = "eval_user") -> dict:
     )
 
     return bundle.model_dump(mode="json")
+
 
 def update_rider_preferences(
     user_id: str,
@@ -1003,7 +1024,7 @@ def update_rider_preferences(
         return {
             "status": "no_update",
             "user_id": user_id,
-            "message": "No preference fields were provided."
+            "message": "No preference fields were provided.",
         }
 
     now = datetime.now(timezone.utc)
@@ -1021,13 +1042,10 @@ def update_rider_preferences(
                     "user_id": user_id,
                     "profile_version": 1,
                     "created_at": now,
-                    "feedback_summary": {
-                        "liked": [],
-                        "disliked": []
-                    }
-                }
+                    "feedback_summary": {"liked": [], "disliked": []},
+                },
             },
-            upsert=True
+            upsert=True,
         )
 
     return {
@@ -1183,5 +1201,5 @@ def get_weather_forecast(
         return {
             "status": "error",
             "location_label": location_label,
-            "message": f"Weather API request failed: {str(e)}",
+            "message": f"Weather API request failed: {e!s}",
         }

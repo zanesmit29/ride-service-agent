@@ -20,7 +20,14 @@ from google.adk.agents import Agent
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
-from .tools import insert_reminder, get_rider_profile, update_rider_preferences, get_weather_forecast, insert_ride_log, parse_natural_date_range
+from .tools import (
+    insert_reminder,
+    get_rider_profile,
+    update_rider_preferences,
+    get_weather_forecast,
+    insert_ride_log,
+    parse_natural_date_range,
+)
 from .prompts import (
     ROOT_AGENT_INSTRUCTIONS,
     SERVICE_AGENT_INSTRUCTIONS,
@@ -51,6 +58,7 @@ def get_mongo_mcp_env() -> dict[str, str]:
         "MDB_MCP_TELEMETRY": "disabled",
     }
 
+
 def build_mongo_toolset(tool_filter: list[str]) -> McpToolset:
     return McpToolset(
         connection_params=StdioConnectionParams(
@@ -64,13 +72,16 @@ def build_mongo_toolset(tool_filter: list[str]) -> McpToolset:
         tool_filter=tool_filter,
     )
 
+
 service_agent = Agent(
     model="gemini-2.5-pro",
     name="service_agent",
     description="Handles motorcycle maintenance analysis, trip-readiness checks, reminder checks, and parts availability using MongoDB data.",
     instruction=SERVICE_AGENT_INSTRUCTIONS,
     tools=[
-        build_mongo_toolset(["find", "aggregate", "collection-schema", "count", "list-collections"]),
+        build_mongo_toolset(
+            ["find", "aggregate", "collection-schema", "count", "list-collections"]
+        ),
         insert_reminder,
     ],
     output_key="service_advice",
@@ -118,6 +129,10 @@ root_agent = Agent(
     description="Coordinates the motorcycle assistant, routing maintenance and trip-readiness questions to service_agent and symptom-based diagnosis questions to diagnostics_agent.",
     instruction=ROOT_AGENT_INSTRUCTIONS,
     tools=[get_rider_profile, update_rider_preferences],
-    sub_agents=[service_agent, diagnostics_agent, trip_planning_agent, ride_logging_agent],
+    sub_agents=[
+        service_agent,
+        diagnostics_agent,
+        trip_planning_agent,
+        ride_logging_agent,
+    ],
 )
-
