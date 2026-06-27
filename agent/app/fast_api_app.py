@@ -15,9 +15,8 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 import google.auth
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from google.adk.cli.fast_api import get_fast_api_app
@@ -72,9 +71,11 @@ app: FastAPI = get_fast_api_app(
 app.title = "agent"
 app.description = "API for interacting with the Agent agent"
 
+
 @app.get("/", include_in_schema=False)
 def root():
     return RedirectResponse(url="/ui", status_code=307)
+
 
 UI_INDEX_PATH = Path(__file__).parent / "ui" / "index.html"
 
@@ -106,9 +107,9 @@ def ui() -> FileResponse:
 
 
 @app.get("/tab-data")
-def tab_data(user_id: str = "eval_user") -> dict[str, object]:
+async def tab_data(user_id: str = "eval_user") -> dict[str, object]:
     """Return the read-only tab payload used by the frontend."""
-    return get_tab_data(user_id)
+    return await get_tab_data(user_id)
 
 
 @app.get("/ready")
@@ -124,7 +125,10 @@ def readiness_check() -> dict[str, object]:
 @app.get("/readyz")
 def readiness_check_alias() -> dict[str, object]:
     """Alias for readiness probe to avoid conflicts with platform reserved paths."""
-    return {"ready": True, "mdb_configured": bool(os.environ.get("MDB_MCP_CONNECTION_STRING"))}
+    return {
+        "ready": True,
+        "mdb_configured": bool(os.environ.get("MDB_MCP_CONNECTION_STRING")),
+    }
 
 
 # Main execution

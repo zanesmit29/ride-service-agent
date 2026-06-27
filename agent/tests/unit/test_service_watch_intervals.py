@@ -1,4 +1,7 @@
-from app.tools import _build_service_watch_items_from_intervals, _enrich_open_reminders_for_watch
+from app.tools import (
+    _build_service_watch_items_from_intervals,
+    _enrich_open_reminders_for_watch,
+)
 
 
 def test_tyre_pressure_uses_days_only_when_interval_km_zero() -> None:
@@ -12,7 +15,9 @@ def test_tyre_pressure_uses_days_only_when_interval_km_zero() -> None:
         }
     ]
 
-    items = _build_service_watch_items_from_intervals(service_intervals, open_reminders=[])
+    items = _build_service_watch_items_from_intervals(
+        service_intervals, open_reminders=[]
+    )
 
     assert len(items) == 1
     item = items[0]
@@ -33,7 +38,9 @@ def test_brake_fluid_prefers_months_over_days() -> None:
         }
     ]
 
-    items = _build_service_watch_items_from_intervals(service_intervals, open_reminders=[])
+    items = _build_service_watch_items_from_intervals(
+        service_intervals, open_reminders=[]
+    )
 
     assert len(items) == 1
     item = items[0]
@@ -51,7 +58,9 @@ def test_air_filter_uses_km_only_when_no_time_interval() -> None:
         }
     ]
 
-    items = _build_service_watch_items_from_intervals(service_intervals, open_reminders=[])
+    items = _build_service_watch_items_from_intervals(
+        service_intervals, open_reminders=[]
+    )
 
     assert len(items) == 1
     item = items[0]
@@ -77,7 +86,9 @@ def test_reminder_metadata_does_not_override_computed_due_values() -> None:
         }
     ]
 
-    items = _build_service_watch_items_from_intervals(service_intervals, open_reminders=reminders)
+    items = _build_service_watch_items_from_intervals(
+        service_intervals, open_reminders=reminders
+    )
 
     assert len(items) == 1
     item = items[0]
