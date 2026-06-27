@@ -25,10 +25,9 @@ Memory:
 - You can read rider memory with get_rider_profile.
 - You can save rider preferences with update_rider_preferences.
 - Use get_rider_profile for trip planning, trip-readiness, route suggestions, weather-sensitive advice, comfort-based advice, or other preference-sensitive recommendations.
-- Always use 'eval_user' as the user_id when calling get_rider_profile.
+- Use the user_id from the current session context when calling get_rider_profile and update_rider_preferences. If no user_id is available in the session, ask the user to identify themselves.
 - If the user states a stable riding preference, ask for brief confirmation before saving it.
 - Only call update_rider_preferences after the user clearly approves saving the preference.
-- Always use 'eval_user' as the user_id when calling update_rider_preferences.
 - Save only preferences the user clearly stated.
 - After saving a preference, treat it as the user's current preference for the rest of the conversation.
 
@@ -314,7 +313,7 @@ Output rules:
 - Highlight urgent items first.
 - After a trip-planning response, you may offer one short optional next step such as a maintenance or trip-readiness check, but only as an offer, not as unsolicited analysis.
 - End with one clear next action or question when appropriate.
-- If a specialist agent returns structured output in the session state (for example keys `service_advice`, `diagnosis`, or `trip_planning_advice`), include that text verbatim as the primary plain‑text response in the chat body. Do not leave the content only in state metadata — echo it so the user sees the result.
+- If a specialist agent returns structured output in the session state (for example keys `service_advice`, `diagnosis`, or `trip_planning_advice`), include that text verbatim as the primary plain-text response in the chat body. Do not leave the content only in state metadata — echo it so the user sees the result.
 """
 
 
@@ -348,40 +347,50 @@ Output rules:
 - Do not invent exact roads, routes, or stop points.
 """
 
-ROOT_AGENT_INSTRUCTIONS = "\n\n".join([
-    ROOT_AGENT,
-    ROOT_AGENT_OUTPUT_RULES,
-])
+ROOT_AGENT_INSTRUCTIONS = "\n\n".join(
+    [
+        ROOT_AGENT,
+        ROOT_AGENT_OUTPUT_RULES,
+    ]
+)
 
-SERVICE_AGENT_INSTRUCTIONS = "\n\n".join([
-    SERVICE_AGENT,
-    DATABASE_RULES,
-    PARTS_RULES,
-    SERVICE_LOGIC,
-    REMINDER_RULES,
-    SERVICE_WORKFLOW,
-    SERVICE_AGENT_OUTPUT_RULES,
-])
+SERVICE_AGENT_INSTRUCTIONS = "\n\n".join(
+    [
+        SERVICE_AGENT,
+        DATABASE_RULES,
+        PARTS_RULES,
+        SERVICE_LOGIC,
+        REMINDER_RULES,
+        SERVICE_WORKFLOW,
+        SERVICE_AGENT_OUTPUT_RULES,
+    ]
+)
 
-DIAGNOSTICS_AGENT_INSTRUCTIONS = "\n\n".join([
-    DIAGNOSTICS_AGENT,
-    DATABASE_RULES,
-    DIAGNOSTICS_WORKFLOW,
-    DIAGNOSTICS_AGENT_OUTPUT_RULES,
-])
+DIAGNOSTICS_AGENT_INSTRUCTIONS = "\n\n".join(
+    [
+        DIAGNOSTICS_AGENT,
+        DATABASE_RULES,
+        DIAGNOSTICS_WORKFLOW,
+        DIAGNOSTICS_AGENT_OUTPUT_RULES,
+    ]
+)
 
-TRIP_PLANNING_AGENT_INSTRUCTIONS = "\n\n".join([
-      TRIP_PLANNING_AGENT,
-      DATABASE_RULES,
-      TRIP_PLANNING_HARD_RULES,
-      TRIP_PLANNING_WORKFLOW,
-      TRIP_PLANNING_SCORING,
-      TRIP_PLANNING_AGENT_OUTPUT_RULES
-])
+TRIP_PLANNING_AGENT_INSTRUCTIONS = "\n\n".join(
+    [
+        TRIP_PLANNING_AGENT,
+        DATABASE_RULES,
+        TRIP_PLANNING_HARD_RULES,
+        TRIP_PLANNING_WORKFLOW,
+        TRIP_PLANNING_SCORING,
+        TRIP_PLANNING_AGENT_OUTPUT_RULES,
+    ]
+)
 
 
 # Compose ride-logging instructions with minimal DB context (not the full DATABASE_RULES)
-RIDE_LOGGING_AGENT_INSTRUCTIONS = "\n\n".join([
-   RIDE_LOGGING_AGENT,
-   RIDE_LOGGING_DB_CONTEXT,
-])
+RIDE_LOGGING_AGENT_INSTRUCTIONS = "\n\n".join(
+    [
+        RIDE_LOGGING_AGENT,
+        RIDE_LOGGING_DB_CONTEXT,
+    ]
+)
